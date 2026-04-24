@@ -40,11 +40,9 @@ jobs:
         run: npm run build
 
       - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: workforce0-docs
-          directory: docs-site/dist
-          branch: main
+          command: pages deploy docs-site/dist --project-name=workforce0-docs --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
