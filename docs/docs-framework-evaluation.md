@@ -776,7 +776,7 @@ import starlight from "@astrojs/starlight";
 import react from "@astrojs/react";
 
 export default defineConfig({
-  site: "https://workforce0.dev",
+  site: "https://workforce0.com",
   integrations: [
     react(),
     starlight({
@@ -825,7 +825,7 @@ export default defineConfig({
 module.exports = {
   title: "Workforce0",
   tagline: "Self-hosted AI workforce — BYOK, open-source.",
-  url: "https://workforce0.dev",
+  url: "https://workforce0.com",
   baseUrl: "/",
   onBrokenLinks: "throw",
   i18n: { defaultLocale: "en", locales: ["en"] },
@@ -874,7 +874,7 @@ module.exports = {
 ```yaml
 # mkdocs.yml
 site_name: Workforce0
-site_url: https://workforce0.dev
+site_url: https://workforce0.com
 repo_url: https://github.com/workforce0/workforce0
 theme:
   name: material

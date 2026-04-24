@@ -52,7 +52,7 @@ docker compose -f docker-compose.prod.yml up -d
 If you already have a cluster:
 
 ```bash
-helm repo add workforce0 https://charts.workforce0.dev
+helm repo add workforce0 https://charts.workforce0.com
 helm install workforce0 workforce0/workforce0 \
   --set env.JWT_SECRET=$(openssl rand -hex 32) \
   --set secrets.anthropicApiKey=$ANTHROPIC_API_KEY

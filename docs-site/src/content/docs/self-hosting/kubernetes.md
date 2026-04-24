@@ -17,7 +17,7 @@ Otherwise, Docker Compose is simpler.
 ## Helm chart
 
 ```bash
-helm repo add workforce0 https://charts.workforce0.dev
+helm repo add workforce0 https://charts.workforce0.com
 helm repo update
 
 helm install workforce0 workforce0/workforce0 \

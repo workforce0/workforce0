@@ -46,7 +46,7 @@ const DOCS_URL =
   process.env.NEXT_PUBLIC_DOCS_URL ??
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:4321"
-    : "https://docs.workforce0.dev");
+    : "https://docs.workforce0.com");
 
 const docUrl = (slug: string) => `${DOCS_URL}/${slug}`;
 

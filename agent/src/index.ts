@@ -28,7 +28,7 @@ export function parseArgs(argv: string[]): AgentConfig {
 
   let token = '';
   let reposRaw = '';
-  let server = 'wss://api.workforce0.dev/agent/ws';
+  let server = 'wss://api.workforce0.com/agent/ws';
   let maxJobs = 3;
   let jobTimeoutMin = 45;
   let verbose = args.includes('--verbose');

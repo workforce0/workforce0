@@ -300,7 +300,7 @@ Hub sends notifications via CommunicationRouter
 workforce0-agent \
   --token wf0_abc123 \
   --repos acme/backend:/path/to/repo,acme/frontend:/path/to/frontend \
-  --server wss://api.workforce0.dev/agent/ws \
+  --server wss://api.workforce0.com/agent/ws \
   --max-jobs 3 \
   --job-timeout 45 \
   --require-approval \
@@ -309,7 +309,7 @@ workforce0-agent \
 # Docker (recommended)
 docker run -d --name workforce0-agent \
   -e WF0_TOKEN=wf0_xxx \
-  -e WF0_SERVER=wss://api.workforce0.dev/agent/ws \
+  -e WF0_SERVER=wss://api.workforce0.com/agent/ws \
   -v ~/.claude:/home/agent/.claude \
   -v ~/code/myapp:/workspace/myapp \
   workforce0/agent --repos acme/app:/workspace/myapp

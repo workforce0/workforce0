@@ -472,7 +472,7 @@ Jira · Slack · GitHub · Linear · Notion · Google Chat · Google Drive · Go
 - [ ] Railway / Render / Fly.io one-click templates — configs shipped, not platform-verified yet
 - [ ] Asana / Salesforce connectors
 - [ ] Telegram per-agent bot (inline Approve/Reject buttons)
-- [ ] Hosted demo on `demo.workforce0.dev`
+- [ ] Hosted demo on `demo.workforce0.com`
 
 See [issues](https://github.com/workforce0/workforce0/issues) and [discussions](https://github.com/workforce0/workforce0/discussions) for what's in flight.
 

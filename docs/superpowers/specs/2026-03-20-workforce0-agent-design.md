@@ -34,7 +34,7 @@ Lives at `workspace-root/agent/` — separate from the `mvp/` backend. Published
 |-----|----------|---------|-------------|
 | `--token <wf0_xxx>` | Yes* | — | Agent token (also: `WF0_TOKEN` env var) |
 | `--repos <slug>:<path>[,...]` | Yes | — | Repo slug-to-local-path mapping |
-| `--server <url>` | No | `wss://api.workforce0.dev/agent/ws` | Server URL (also: `WF0_SERVER` env var) |
+| `--server <url>` | No | `wss://api.workforce0.com/agent/ws` | Server URL (also: `WF0_SERVER` env var) |
 | `--max-jobs <n>` | No | 3 | Max concurrent jobs |
 | `--job-timeout <min>` | No | 45 | Job timeout in minutes |
 | `--verbose` | No | false | Debug logging |

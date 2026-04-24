@@ -165,4 +165,4 @@ Yes. See [Contributing](/contributing/development/).
 
 - Open a GitHub issue.
 - Join the community Slack (link in the repo README).
-- For security issues: `security@workforce0.dev` (PGP key in repo).
+- For security issues: `security@workforce0.com` (PGP key in repo).

@@ -3,7 +3,7 @@ import starlight from "@astrojs/starlight";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://workforce0.dev",
+  site: "https://workforce0.com",
   integrations: [
     starlight({
       title: "Workforce0",

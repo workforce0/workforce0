@@ -134,5 +134,5 @@ Every mutation records `actor`, `action`, `target`, `timestamp`, and
 
 ## Reporting vulnerabilities
 
-Don't open a public issue. Email `security@workforce0.dev` (PGP key
+Don't open a public issue. Email `security@workforce0.com` (PGP key
 on the repo). Expect acknowledgement in 72 hours.

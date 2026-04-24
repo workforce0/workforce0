@@ -8,11 +8,11 @@
  * Requires:
  *   - Backend running at localhost:8005
  *   - GEMINI_API_KEY configured
- *   - Admin user exists (admin@workforce0.dev / admin123456)
+ *   - Admin user exists (admin@workforce0.com / admin123456)
  */
 
 const API = 'http://localhost:8005';
-const EMAIL = 'admin@workforce0.dev';
+const EMAIL = 'admin@workforce0.com';
 const PASSWORD = 'admin123456';
 
 const SAMPLE_TRANSCRIPT = `
