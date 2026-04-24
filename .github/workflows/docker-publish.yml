@@ -22,8 +22,8 @@ jobs:
       matrix:
         include:
           - image: backend
-            context: ./mvp
-            dockerfile: ./mvp/Dockerfile
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
           - image: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile

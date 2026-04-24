@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (mvp)
+    name: Backend
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -38,7 +38,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: mvp
+        working-directory: backend
 
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: mvp/package-lock.json
+          cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run db:generate
       - run: npm run lint
@@ -81,6 +81,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build backend image
-        run: docker build -t workforce0-backend ./mvp
+        run: docker build -t workforce0-backend ./backend
       - name: Build frontend image
         run: docker build -t workforce0-frontend ./frontend

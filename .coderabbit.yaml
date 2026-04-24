@@ -1,0 +1,41 @@
+# CodeRabbit — AI code review config
+# https://docs.coderabbit.ai/reference/yaml-template
+# Free for public OSS. Install the GitHub App: https://github.com/apps/coderabbitai
+
+language: en-US
+early_access: true
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+  path_instructions:
+    - path: "docs-site/**"
+      instructions: |
+        Starlight docs site. Flag any GPT-o1 / stale-model references,
+        ithadmin / personal-name leaks, and broken cross-refs between
+        sibling docs pages. Verify new features have a matching docs page
+        (memory rule: docs-update cadence).
+    - path: "backend/src/**/*.ts"
+      instructions: |
+        Fastify + Prisma backend. Verify RLS middleware coverage on new
+        tenant-scoped tables. Flag direct provider-SDK imports outside
+        ModelRegistryService. Flag bypass of the structured logger in
+        favor of console.log.
+    - path: "frontend/src/**/*.tsx"
+      instructions: |
+        Next.js 16 + React 19 audit UI. Verify accessibility (focus rings,
+        aria-labels on icon-only buttons). Flag color-only state signals.
+  tools:
+    ast-grep:
+      packages: []
+      rule_dirs: []
+chat:
+  auto_reply: true
