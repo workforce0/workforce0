@@ -53,12 +53,17 @@ const docUrl = (slug: string) => `${DOCS_URL}/${slug}`;
 const DOCKER_ONE_LINER = `git clone ${GITHUB_REPO_URL}
 cd workforce0 && docker compose up`;
 
+// Hosted mode = static-exported public marketing build (Cloudflare Pages).
+// Skip the auth-redirect and swap auth CTAs for "Install on GitHub" links.
+const HOSTED_MODE = process.env.NEXT_PUBLIC_HOSTED_MODE === "1";
+
 export default function Landing() {
   const router = useRouter();
-  const [authChecked, setAuthChecked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(HOSTED_MODE);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (HOSTED_MODE) return;
     if (isAuthenticated()) {
       router.replace("/dashboard");
       return;
@@ -155,13 +160,23 @@ function TopNav() {
             <Github className="w-4 h-4" aria-hidden="true" />
             GitHub
           </a>
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-ink text-ink-inverse text-[13px] font-medium hover:bg-ink-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-          >
-            Get started
-            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-          </Link>
+          {HOSTED_MODE ? (
+            <a
+              href="#install"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-ink text-ink-inverse text-[13px] font-medium hover:bg-ink-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            >
+              Get started
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </a>
+          ) : (
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-ink text-ink-inverse text-[13px] font-medium hover:bg-ink-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            >
+              Get started
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+          )}
         </div>
       </div>
     </header>
@@ -706,7 +721,9 @@ function Footer() {
           <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className="text-ink-secondary hover:text-ink transition-colors">
             GitHub
           </a>
-          <Link href="/login" className="text-ink-secondary hover:text-ink transition-colors">Sign in</Link>
+          {!HOSTED_MODE && (
+            <Link href="/login" className="text-ink-secondary hover:text-ink transition-colors">Sign in</Link>
+          )}
         </nav>
       </div>
     </footer>
