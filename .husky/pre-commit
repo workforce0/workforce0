@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Workforce0 pre-commit hook — runs lint-staged across the monorepo.
+# Managed by Husky. See .husky/README.md for bootstrap instructions.
+
+npx lint-staged

@@ -1,0 +1,163 @@
+# =============================================================================
+# WORKFORCE0 — RENDER BLUEPRINT
+# =============================================================================
+#
+# One-click deploy for the Workforce0 open-source AI workforce platform.
+#
+# Click the "Deploy to Render" button in the README to provision:
+#   - Managed PostgreSQL 15
+#   - Managed Redis (Key Value store)
+#   - Backend API    (Fastify, Docker)
+#   - Frontend        (Next.js 16, Docker)
+#
+# After deploy, Render will prompt you for a Gemini API key (required)
+# and optional Anthropic / OpenAI keys. Everything else is auto-wired.
+#
+# Spec: https://render.com/docs/blueprint-spec
+# =============================================================================
+
+databases:
+  - name: workforce0-postgres
+    databaseName: workforce0
+    user: workforce0
+    plan: basic-256mb
+    postgresMajorVersion: "15"
+    ipAllowList: []   # private network only — no external access
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redis (Key Value) — sessions, queues, rate limits
+  # ---------------------------------------------------------------------------
+  - type: keyvalue
+    name: workforce0-redis
+    plan: free
+    ipAllowList: []   # private network only
+    maxmemoryPolicy: allkeys-lru
+
+  # ---------------------------------------------------------------------------
+  # Backend API (Fastify) — auto-deployed from backend/Dockerfile
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: workforce0-backend
+    runtime: docker
+    plan: starter
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: info
+
+      # --- Database & cache (auto-wired via service references) ---
+      - key: DATABASE_URL
+        fromDatabase:
+          name: workforce0-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: workforce0-redis
+          property: connectionString
+
+      # --- Auto-generated secrets ---
+      - key: JWT_SECRET
+        generateValue: true
+      - key: API_KEY
+        generateValue: true
+
+      # --- User-entered (required) ---
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # --- User-entered (optional — extra AI Council models) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+      # --- Public URL (points to the frontend service) ---
+      - key: PUBLIC_URL
+        fromService:
+          type: web
+          name: workforce0-frontend
+          property: hostport   # resolves to hostname for the frontend service
+
+      # --- CORS: allow the frontend origin ---
+      - key: CORS_ORIGINS
+        fromService:
+          type: web
+          name: workforce0-frontend
+          property: host
+
+      # --- Feature defaults (safe in production) ---
+      - key: ENABLE_DEBUG_ENDPOINTS
+        value: "false"
+      - key: ENABLE_AI_FALLBACK
+        value: "true"
+      - key: RATE_LIMIT_MAX
+        value: "100"
+      - key: RATE_LIMIT_WINDOW
+        value: "60000"
+
+      # --- Voice (Gemini Live) ---
+      - key: VOICE_ENABLED
+        value: "true"
+      - key: GEMINI_VOICE_MODEL
+        value: gemini-2.0-flash-exp
+      - key: GEMINI_VOICE_NAME
+        value: Puck
+
+      # --- Optional integrations (configurable later via in-app wizard) ---
+      - key: JIRA_BASE_URL
+        sync: false
+      - key: JIRA_EMAIL
+        sync: false
+      - key: JIRA_API_TOKEN
+        sync: false
+      - key: JIRA_DEFAULT_PROJECT
+        sync: false
+      - key: GCHAT_WEBHOOK_URL
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Frontend (Next.js 16) — auto-deployed from frontend/Dockerfile
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: workforce0-frontend
+    runtime: docker
+    plan: starter
+    region: oregon
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: HOSTNAME
+        value: 0.0.0.0
+
+      # --- Backend URL (auto-wired, internal network) ---
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: workforce0-backend
+          property: hostport

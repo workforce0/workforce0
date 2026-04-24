@@ -1,0 +1,134 @@
+# =============================================================================
+# WORKFORCE0 - FLY.IO DEPLOYMENT (BACKEND)
+# =============================================================================
+#
+# This fly.toml deploys the Workforce0 BACKEND API (Fastify on Node 20)
+# from ./backend/Dockerfile.
+#
+# Workforce0 is composed of two deployable services:
+#   1. Backend  (this fly.toml)     -> ./backend/Dockerfile     :3000
+#   2. Frontend (separate Fly app)  -> ./frontend/Dockerfile :3001
+#
+# -----------------------------------------------------------------------------
+# FIRST-TIME DEPLOY
+# -----------------------------------------------------------------------------
+#
+#   # 1. Launch the backend app (from repo root)
+#   fly launch --no-deploy --copy-config --name workforce0-backend
+#
+#   # 2. Provision Postgres and attach it (sets DATABASE_URL automatically)
+#   fly postgres create --name workforce0-db
+#   fly postgres attach workforce0-db --app workforce0-backend
+#
+#   # 3. Provision Redis (Upstash) and attach it (sets REDIS_URL automatically)
+#   fly redis create
+#   # Follow prompts, then note the connection string and set it:
+#   fly secrets set REDIS_URL="redis://default:...@fly-...upstash.io:6379" --app workforce0-backend
+#
+#   # 4. Set required secrets
+#   fly secrets set \
+#     JWT_SECRET="$(openssl rand -base64 32)" \
+#     GEMINI_API_KEY="your-gemini-key" \
+#     PUBLIC_URL="https://workforce0-frontend.fly.dev" \
+#     --app workforce0-backend
+#
+#   # 5. (Optional) Add extra AI Council providers
+#   fly secrets set ANTHROPIC_API_KEY="..." OPENAI_API_KEY="..." --app workforce0-backend
+#
+#   # 6. Deploy
+#   fly deploy --app workforce0-backend
+#
+#   # 7. Deploy the frontend as a SEPARATE app:
+#   cd frontend
+#   fly launch --name workforce0-frontend
+#   fly secrets set BACKEND_URL="https://workforce0-backend.fly.dev" --app workforce0-frontend
+#   fly deploy --app workforce0-frontend
+#
+# -----------------------------------------------------------------------------
+# NOTE ON POSTGRES / REDIS
+# -----------------------------------------------------------------------------
+# Fly provides managed Postgres and Redis (via Upstash) as attached resources.
+# You do NOT need docker-compose's postgres/redis services on Fly -- they are
+# replaced by `fly postgres create` and `fly redis create`. No volumes needed
+# here; Fly Postgres persists data on its own volume.
+# =============================================================================
+
+app = "workforce0-backend"
+primary_region = "iad"  # Change to your preferred region: fly platform regions
+
+# -----------------------------------------------------------------------------
+# Build: use the backend Dockerfile
+# -----------------------------------------------------------------------------
+[build]
+  dockerfile = "backend/Dockerfile"
+
+# -----------------------------------------------------------------------------
+# Release: run Prisma migrations before swapping to the new release
+# -----------------------------------------------------------------------------
+[deploy]
+  release_command = "npx prisma migrate deploy"
+  strategy = "rolling"
+
+# -----------------------------------------------------------------------------
+# Non-secret env (secrets go via `fly secrets set`)
+# -----------------------------------------------------------------------------
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  HOST = "0.0.0.0"
+  LOG_LEVEL = "info"
+  ENABLE_AI_FALLBACK = "true"
+
+# -----------------------------------------------------------------------------
+# HTTP service on port 3000 with /health check
+# -----------------------------------------------------------------------------
+[[services]]
+  protocol = "tcp"
+  internal_port = 3000
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
+
+# -----------------------------------------------------------------------------
+# VM size: shared-cpu-1x / 1GB is adequate for the default workload.
+# Bump memory_mb if you enable many concurrent AI Council critiques.
+# -----------------------------------------------------------------------------
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# -----------------------------------------------------------------------------
+# Mounts: NOT needed for the default setup (Fly Postgres handles persistence).
+# Uncomment only if you add local file storage (e.g. uploaded documents).
+# -----------------------------------------------------------------------------
+# [[mounts]]
+#   source = "workforce0_data"
+#   destination = "/app/data"
+#   initial_size = "10gb"

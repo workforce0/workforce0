@@ -1,0 +1,29 @@
+{
+  "name": "workforce0",
+  "version": "0.1.0",
+  "description": "Open-source, self-hosted AI workforce for product teams. Meetings in, shipped code out.",
+  "bin": {
+    "workforce0": "./scripts/onboard.mjs"
+  },
+  "scripts": {
+    "onboard": "node scripts/onboard.mjs",
+    "onboard:yes": "node scripts/onboard.mjs --yes --demo",
+    "down": "docker compose -f docker-compose.prod.yml down",
+    "logs": "docker compose -f docker-compose.prod.yml logs -f"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "scripts/onboard.mjs",
+    ".env.example",
+    "docker-compose.prod.yml",
+    "docs"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/workforce0/workforce0.git"
+  },
+  "homepage": "https://github.com/workforce0/workforce0"
+}

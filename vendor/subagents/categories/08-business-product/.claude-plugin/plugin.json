@@ -1,0 +1,25 @@
+{
+  "name": "voltagent-biz",
+  "version": "1.0.2",
+  "description": "Product, legal, and business specialists - product strategy, licensing, project management, UX research",
+  "author": {
+    "name": "VoltAgent Community",
+    "url": "https://github.com/VoltAgent"
+  },
+  "repository": "https://github.com/VoltAgent/awesome-claude-code-subagents",
+  "license": "MIT",
+  "agents": [
+    "./business-analyst.md",
+    "./content-marketer.md",
+    "./customer-success-manager.md",
+    "./legal-advisor.md",
+    "./license-engineer.md",
+    "./product-manager.md",
+    "./project-manager.md",
+    "./sales-engineer.md",
+    "./scrum-master.md",
+    "./technical-writer.md",
+    "./ux-researcher.md",
+    "./wordpress-master.md"
+  ]
+}

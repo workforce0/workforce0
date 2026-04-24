@@ -1,0 +1,196 @@
+# =============================================================================
+# WORKFORCE0 - DIGITALOCEAN APP PLATFORM SPEC
+# =============================================================================
+#
+# One-click deploy spec for Workforce0 (open-source, self-hosted AI workforce).
+#
+# Deploy via:
+#   https://cloud.digitalocean.com/apps/new?repo=https://github.com/<owner>/workforce0/tree/main
+#
+# Reference: https://docs.digitalocean.com/products/app-platform/reference/app-spec/
+#
+# After deploy:
+#   1. DigitalOcean will prompt for the SECRET env var GEMINI_API_KEY
+#   2. JWT_SECRET is auto-generated
+#   3. DATABASE_URL / REDIS_URL are auto-injected from managed DB bindings
+#   4. PUBLIC_URL resolves to ${APP_URL} (set automatically by App Platform)
+# =============================================================================
+
+name: workforce0
+region: nyc
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+  # -------------------------------------------------------------------------
+  # Backend API (Fastify + Prisma)
+  # -------------------------------------------------------------------------
+  - name: backend
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 30
+      period_seconds: 15
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        type: GENERAL
+        value: production
+
+      - key: LOG_LEVEL
+        scope: RUN_TIME
+        type: GENERAL
+        value: info
+
+      # Managed Postgres - auto-injected from databases[] binding below
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: GENERAL
+        value: ${db.DATABASE_URL}
+
+      # Managed Redis - auto-injected from databases[] binding below
+      - key: REDIS_URL
+        scope: RUN_TIME
+        type: GENERAL
+        value: ${redis.DATABASE_URL}
+
+      # Auto-generated 32+ char secret (never logged or exposed)
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        generated: true
+
+      # User-supplied at deploy time (free tier works: https://aistudio.google.com/app/apikey)
+      - key: GEMINI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # Optional AI Council models - user can fill later from in-app settings
+      - key: ANTHROPIC_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+
+      # Public URL (App Platform sets APP_URL automatically)
+      - key: PUBLIC_URL
+        scope: RUN_TIME
+        type: GENERAL
+        value: ${APP_URL}
+
+      - key: CORS_ORIGINS
+        scope: RUN_TIME
+        type: GENERAL
+        value: ${APP_URL}
+
+      - key: RATE_LIMIT_MAX
+        scope: RUN_TIME
+        type: GENERAL
+        value: "100"
+
+      - key: RATE_LIMIT_WINDOW
+        scope: RUN_TIME
+        type: GENERAL
+        value: "60000"
+
+      - key: ENABLE_AI_FALLBACK
+        scope: RUN_TIME
+        type: GENERAL
+        value: "true"
+
+    routes:
+      - path: /api
+      - path: /health
+      - path: /voice
+
+  # -------------------------------------------------------------------------
+  # Frontend (Next.js 16, standalone output)
+  # -------------------------------------------------------------------------
+  - name: frontend
+    source_dir: frontend
+    dockerfile_path: frontend/Dockerfile
+    http_port: 3001
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /
+      initial_delay_seconds: 30
+      period_seconds: 15
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    envs:
+      - key: NODE_ENV
+        scope: RUN_AND_BUILD_TIME
+        type: GENERAL
+        value: production
+
+      # Private VPC URL to backend (no egress cost, never public)
+      - key: BACKEND_URL
+        scope: RUN_AND_BUILD_TIME
+        type: GENERAL
+        value: ${backend.PRIVATE_URL}
+
+      - key: NEXT_PUBLIC_APP_URL
+        scope: RUN_AND_BUILD_TIME
+        type: GENERAL
+        value: ${APP_URL}
+
+    routes:
+      - path: /
+
+# ---------------------------------------------------------------------------
+# Managed Databases
+# ---------------------------------------------------------------------------
+databases:
+  # Managed PostgreSQL (dev tier — upgrade via DO control panel for production load)
+  - name: db
+    engine: PG
+    version: "15"
+    production: false
+    cluster_name: workforce0-postgres
+
+  # Managed Redis (dev tier)
+  - name: redis
+    engine: REDIS
+    version: "7"
+    production: false
+    cluster_name: workforce0-redis
+
+# ---------------------------------------------------------------------------
+# Ingress (frontend is default route, backend paths are proxied)
+# ---------------------------------------------------------------------------
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /api
+      component:
+        name: backend
+    - match:
+        path:
+          prefix: /health
+      component:
+        name: backend
+    - match:
+        path:
+          prefix: /voice
+      component:
+        name: backend
+    - match:
+        path:
+          prefix: /
+      component:
+        name: frontend

@@ -1,0 +1,6 @@
+{
+  "backend/**/*.{ts,tsx,js,jsx}": ["eslint --fix"],
+  "frontend/**/*.{ts,tsx,js,jsx}": ["eslint --fix"],
+  "agent/**/*.{ts,js}": ["eslint --fix"],
+  "*.{json,md,yml,yaml,css}": ["prettier --write"]
+}

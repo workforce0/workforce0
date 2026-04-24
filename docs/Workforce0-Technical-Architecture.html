@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Workforce0 Technical Architecture</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="data:text/css,body{font-family:system-ui,-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;line-height:1.6;color:#1a1a2e;font-size:14px}h1{color:#1a1a2e;border-bottom:2px solid #3b82f6;padding-bottom:8px}h2{color:#1a1a2e;margin-top:2em;border-bottom:1px solid #e5e5e5;padding-bottom:4px}h3{color:#334155}table{border-collapse:collapse;width:100%;margin:1em 0;font-size:13px}th,td{border:1px solid #d1d5db;padding:6px 10px;text-align:left}th{background:#f1f5f9;font-weight:600}pre{background:#1e293b;color:#e2e8f0;padding:12px 16px;border-radius:8px;overflow-x:auto;font-size:12px;line-height:1.5}code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.85em}pre code{background:none;padding:0}blockquote{border-left:4px solid #3b82f6;margin:1em 0;padding:0.5em 1em;background:#eff6ff;color:#1e40af}hr{border:none;border-top:1px solid #e5e5e5;margin:2em 0}" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Workforce0 Technical Architecture</h1>
+</header>
+<h1 id="workforce0-technical-architecture-guide">Workforce0 – Technical
+Architecture Guide</h1>
+<blockquote>
+<p>For CTOs, Lead Developers, and Engineering Leaders</p>
+</blockquote>
+<hr />
+<h2 id="system-overview">System Overview</h2>
+<p>Workforce0 is an AI Workforce Platform that transforms meeting
+transcripts into deployed software and business actions. AI agents (BA,
+Dev, QA) do the work; humans approve. The system uses multi-model
+consensus (Gemini generates, GPT-o1 critiques, Claude codes) and a
+self-improving skill system that learns from outcomes.</p>
+<pre><code>                         ┌──────────────────────────────────────────────────────────┐
+                         │  Workforce0 Cloud                                        │
+                         │                                                          │
+                         │  ┌──────────────┐    ┌───────────────┐   ┌────────────┐ │
+                         │  │  Next.js      │    │  Fastify API  │   │ PostgreSQL │ │
+                         │  │  Frontend     │───&gt;│  Port 3000    │──&gt;│ (Prisma 7) │ │
+                         │  │  Port 3001    │    │               │   │            │ │
+                         │  │  Radix + TW4  │&lt;───│  JWT + RLS    │   │  30 models │ │
+                         │  └──────────────┘    └──────┬────────┘   └────────────┘ │
+                         │        ^  SSE               │                  ^         │
+                         │        │                    │ WebSocket        │         │
+                         │        │              ┌─────┴──────┐    ┌─────┴──────┐  │
+                         │        └──────────────│  AgentHub   │    │   Redis    │  │
+                         │                       │  (WS Server)│    │  + BullMQ  │  │
+                         │                       └─────┬───────┘   └────────────┘  │
+                         └─────────────────────────────┼───────────────────────────┘
+                                                       │ WSS (token auth)
+                                          ┌────────────┴────────────┐
+                                          │  Customer Machine       │
+                                          │  ┌────────────────────┐ │
+                                          │  │ workforce0-agent   │ │
+                                          │  │ (Docker container) │ │
+                                          │  │  + Claude CLI      │ │
+                                          │  │  + Git / GitHub CLI│ │
+                                          │  └────────────────────┘ │
+                                          │  Mounts: repo volumes,  │
+                                          │  ~/.claude credentials  │
+                                          └─────────────────────────┘
+
+  External Integrations:                   AI Pipeline:
+  ┌───────────┐ ┌───────┐ ┌──────┐       ┌──────────────────────────────────┐
+  │   Jira    │ │ Slack │ │Google│       │  Gemini Flash  ──(generate)──&gt;   │
+  │  (tickets)│ │ Teams │ │ Meet │       │  GPT-o1        ──(critique)──&gt;   │
+  │  GitHub   │ │ Email │ │ Drive│       │  Claude Sonnet ──(code)─────&gt;    │
+  │  Stripe   │ │ SMS   │ │ Twilio│      │  Confidence thresholds: 0.7/0.9 │
+  └───────────┘ └───────┘ └──────┘       └──────────────────────────────────┘</code></pre>
+<h3 id="request-flow">Request Flow</h3>
+<pre><code>Meeting Audio/Transcript
+    │
+    ▼
+Upload Route ──&gt; S3 + Whisper (transcription) ──&gt; MeetingService
+    │                                                    │
+    ▼                                                    ▼
+BullMQ Job ──&gt; BA Agent (Gemini) ──&gt; PRD Draft ──&gt; AI Council (GPT-o1 critique)
+    │                                                    │
+    ▼                                                    ▼
+    │  confidence &gt;= 0.9: auto-approve          0.7-0.89: human review
+    │  confidence &lt; 0.7:  blocked               clarification loop via comms
+    │                                                    │
+    ▼                                                    ▼
+PRD Approved ──&gt; AgentHub dispatches job ──&gt; WebSocket ──&gt; Agent CLI
+    │                                                    │
+    ▼                                                    ▼
+Agent spawns `claude -p` with PRD ──&gt; Implementation ──&gt; git commit + PR
+    │                                                    │
+    ▼                                                    ▼
+OutcomeObserver records result ──&gt; MemoryOptimizer ──&gt; Learned Skills</code></pre>
+<hr />
+<h2 id="tech-stack">Tech Stack</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 40%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>Next.js, React, Radix UI, Tailwind CSS v4</td>
+<td>Executive-friendly UI</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Fastify, TypeScript, Node.js 20</td>
+<td>API server with plugin architecture</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>PostgreSQL 15 + Prisma 7 (adapter pattern)</td>
+<td>Data persistence, multi-tenant RLS</td>
+</tr>
+<tr>
+<td>Cache/Queue</td>
+<td>Redis 7 + BullMQ</td>
+<td>Caching, job processing (10 job types)</td>
+</tr>
+<tr>
+<td>AI (BA Agent)</td>
+<td>Google Gemini 2.0 Flash</td>
+<td>Meeting analysis, PRD generation</td>
+</tr>
+<tr>
+<td>AI (Critique)</td>
+<td>OpenAI GPT-o1</td>
+<td>Adversarial PRD review</td>
+</tr>
+<tr>
+<td>AI (Dev Agent)</td>
+<td>Anthropic Claude Sonnet 4 (user’s subscription)</td>
+<td>Code generation (runs on user’s machine)</td>
+</tr>
+<tr>
+<td>AI (Voice)</td>
+<td>OpenAI Realtime API + Twilio</td>
+<td>Dial-in voice bot for meetings</td>
+</tr>
+<tr>
+<td>Real-time</td>
+<td>WebSocket (ws) + SSE</td>
+<td>Agent connections, UI event streaming</td>
+</tr>
+<tr>
+<td>Agent Runtime</td>
+<td>Node.js CLI / Docker (node:20-alpine)</td>
+<td>Remote code execution</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>JWT (httpOnly cookies) + WorkOS SSO</td>
+<td>Authentication, enterprise SSO</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>OpenTelemetry, Pino structured logging</td>
+<td>Distributed tracing, log aggregation</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Slack, Email (SendGrid), Teams, WhatsApp, SMS</td>
+<td>Multi-channel notifications</td>
+</tr>
+<tr>
+<td>Billing</td>
+<td>Stripe</td>
+<td>Subscription management</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>AWS S3</td>
+<td>Meeting audio uploads</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="data-model">Data Model</h2>
+<p>30 Prisma models organized by domain. Key models and their
+relationships:</p>
+<pre><code>┌─────────┐     ┌──────┐     ┌────────────┐     ┌──────┐     ┌───────────┐
+│ Tenant  │────&lt;│ User │     │  Meeting   │────&lt;│ PRD  │────&lt;│JiraTicket │
+│         │     │      │     │            │     │      │     │           │
+│ tier    │     │ role │     │ source     │     │status│     │externalKey│
+│ billing │     │      │     │ audioUrl   │     │      │     │           │
+└────┬────┘     └──────┘     └─────┬──────┘     └──────┘     └───────────┘
+     │                             │
+     │                       ┌─────┴──────┐
+     │                       │ Transcript │
+     │                       │ segments   │
+     │                       │ fullText   │
+     │                       └────────────┘
+     │
+     ├────&lt; AgentTask ────&lt; ClarificationRequest
+     │        │ agentType         routeTo, urgency
+     │        │ status            options, response
+     │        │ confidence
+     │
+     ├────&lt; Engagement (lifecycle state machine)
+     │        phase: listen &gt; understand &gt; analyze_ask &gt; approve &gt; build &gt; test &gt; ship &gt; learn
+     │
+     ├────&lt; AgentToken (WebSocket auth)
+     │        tokenHash (SHA-256), show-once
+     │
+     ├────&lt; AgentJob (dispatched to agents)
+     │        action, targetRepo, status, payload
+     │
+     ├────&lt; TenantMemory (per-customer conventions)
+     │        category, key, value, confidence
+     │
+     ├────&lt; TenantUsage (AI cost metering)
+     │        agentType, model, inputTokens, outputTokens, costUSD
+     │
+     ├────&lt; ModelProvider ────&lt; ModelConfig
+     │                           modelId, costInput, costOutput
+     │
+     ├────&lt; AgentConfig (per-tenant agent tuning)
+     │        agentType, preset, primaryModelId, confidenceThreshold
+     │
+     ├────&lt; WebhookEndpoint ────&lt; WebhookDelivery
+     │        url, secret (HMAC-SHA256), events[]
+     │
+     ├────&lt; TeamMember (communication routing)
+     │        preferredChannel, channelIds
+     │
+     └────&lt; AuditLog
+              action, resource, before/after JSON</code></pre>
+<h3 id="global-models-not-tenant-scoped">Global models (not
+tenant-scoped):</h3>
+<ul>
+<li><strong>LearnedSkill</strong> – AI-generated skills from outcome
+analysis (candidate/active/demoted lifecycle)</li>
+<li><strong>AgentOutcome</strong> – Records of agent task results for
+the learning loop</li>
+<li><strong>MeetingInsights</strong> – AI-generated meeting summaries,
+action items, decisions</li>
+<li><strong>PRDTemplate</strong> – Configurable PRD section templates
+(system-default or tenant-specific)</li>
+</ul>
+<h3 id="multi-tenancy-implementation">Multi-Tenancy Implementation</h3>
+<p>Tenant isolation is enforced at three levels:</p>
+<ol type="1">
+<li><strong>Prisma Client Extensions</strong> –
+<code>createTenantAwarePrisma()</code> wraps the Prisma client with
+<code>$extends</code> to automatically filter all queries on
+tenant-scoped models by <code>tenantId</code>.</li>
+<li><strong>Middleware</strong> –
+<code>registerTenantMiddleware()</code> extracts <code>tenantId</code>
+from JWT and attaches it to request context. In development, the
+<code>X-Tenant-ID</code> header is also accepted.</li>
+<li><strong>Route-level</strong> – All <code>/api/*</code> routes
+require JWT authentication, and <code>tenantId</code> is extracted from
+the token payload.</li>
+</ol>
+<hr />
+<h2 id="agent-architecture">Agent Architecture</h2>
+<h3 id="agenthub-websocket-server">AgentHub – WebSocket Server</h3>
+<p>The AgentHub manages persistent WebSocket connections between the
+Workforce0 cloud and customer-deployed agents. It handles
+authentication, job dispatch, progress tracking, and result
+collection.</p>
+<p><strong>Connection limits:</strong> - Max 20 agents per tenant - Max
+500 agents total - Max payload: 5 MB - Auth deadline: 10 seconds -
+Heartbeat timeout: 90 seconds</p>
+<h3 id="websocket-protocol">WebSocket Protocol</h3>
+<p>All messages are JSON. The protocol uses a strict lifecycle: auth,
+register, then job dispatch.</p>
+<p><strong>Agent to Hub:</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Authenticate with token</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;auth&#39;</span><span class="op">,</span> token<span class="op">:</span> <span class="dt">string</span> }</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Register capabilities</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;register&#39;</span><span class="op">,</span> repos<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span> capabilities<span class="op">:</span> <span class="dt">string</span>[] }</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Heartbeat</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;ping&#39;</span> }</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Acknowledge job receipt</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;job_ack&#39;</span><span class="op">,</span> jobId<span class="op">:</span> <span class="dt">string</span> }</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Report progress</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;job_progress&#39;</span><span class="op">,</span> jobId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> percent<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> logs<span class="op">?:</span> <span class="dt">string</span>[] }</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 6. Report result</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;job_result&#39;</span><span class="op">,</span> jobId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;done&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span> data<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;</span> }</span></code></pre></div>
+<p><strong>Hub to Agent:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Auth response</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;auth_ok&#39;</span><span class="op">,</span> agentId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> tenantId<span class="op">:</span> <span class="dt">string</span> }</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;auth_error&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Registration acknowledged</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;registered&#39;</span><span class="op">,</span> repos<span class="op">:</span> <span class="dt">number</span> }</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Heartbeat response</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;pong&#39;</span> }</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Job dispatch</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;job&#39;</span><span class="op">,</span> jobId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> action<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;</span> }</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Job completion acknowledgment</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;job_complete&#39;</span><span class="op">,</span> jobId<span class="op">:</span> <span class="dt">string</span> }</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Resume stalled job</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;job_resume&#39;</span><span class="op">,</span> jobId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;</span> }</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Graceful shutdown notice</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>{ type<span class="op">:</span> <span class="st">&#39;server_shutdown&#39;</span><span class="op">,</span> reconnectAfter<span class="op">:</span> <span class="dt">number</span> }</span></code></pre></div>
+<h3 id="agent-connection-state">Agent Connection State</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> AgentConnection {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  agentId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  tenantId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  ws<span class="op">:</span> <span class="bu">WebSocket</span><span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  repos<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>           <span class="co">// e.g. [&quot;acme/backend&quot;, &quot;acme/frontend&quot;]</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  capabilities<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>    <span class="co">// e.g. [&quot;claude&quot;, &quot;git&quot;, &quot;npm&quot;, &quot;gh&quot;]</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  activeJobs<span class="op">:</span> <span class="bu">Set</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">&gt;;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  maxActiveJobs<span class="op">:</span> <span class="dt">number</span><span class="op">;</span>     <span class="co">// Default: 3</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  connectedAt<span class="op">:</span> <span class="bu">Date</span><span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  lastPingAt<span class="op">:</span> <span class="bu">Date</span><span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  authenticated<span class="op">:</span> <span class="dt">boolean</span><span class="op">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="job-lifecycle">Job Lifecycle</h3>
+<pre><code>PRD Approved (UI or AI Council auto-approve)
+    │
+    ▼
+AgentJobQueue.enqueue({ action: &#39;implement_prd&#39;, targetRepo, payload: { prdContent, branch } })
+    │
+    ▼
+AgentHub finds idle agent matching targetRepo
+    │
+    ▼
+Hub sends { type: &#39;job&#39;, ... } to agent WebSocket
+    │
+    ▼
+Agent sends { type: &#39;job_ack&#39;, jobId }           (5-min ack deadline)
+    │
+    ▼
+Agent spawns `claude -p - --output-format json --allowedTools Edit,Write,Bash,Read,Grep,Glob`
+    │   └── PRD content piped via stdin
+    │
+    ▼
+Agent sends periodic { type: &#39;job_progress&#39;, percent, message }
+    │   └── Progress patterns: reading (5%) -&gt; analyzing (15%) -&gt; writing code (30-45%)
+    │       -&gt; tests (60%) -&gt; committing (80%) -&gt; pushing (90%) -&gt; done (95%)
+    │
+    ▼
+Agent runs git push + PR creation (via gh CLI)
+    │
+    ▼
+Agent sends { type: &#39;job_result&#39;, status: &#39;done&#39;, data: { prUrl, branch, ... } }
+    │
+    ▼
+Hub records outcome via OutcomeObserver
+    │
+    ▼
+Hub advances Engagement phase (build -&gt; test -&gt; ship)
+    │
+    ▼
+Hub sends notifications via CommunicationRouter</code></pre>
+<h3 id="agent-cli-usage">Agent CLI Usage</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Direct invocation</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">workforce0-agent</span> <span class="dt">\</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--token</span> wf0_abc123 <span class="dt">\</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--repos</span> acme/backend:/path/to/repo,acme/frontend:/path/to/frontend <span class="dt">\</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--server</span> wss://api.workforce0.dev/agent/ws <span class="dt">\</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--max-jobs</span> 3 <span class="dt">\</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--job-timeout</span> 45 <span class="dt">\</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--require-approval</span> <span class="dt">\</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--verbose</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Docker (recommended)</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-d</span> <span class="at">--name</span> workforce0-agent <span class="dt">\</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> WF0_TOKEN=wf0_xxx <span class="dt">\</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> WF0_SERVER=wss://api.workforce0.dev/agent/ws <span class="dt">\</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">-v</span> ~/.claude:/home/agent/.claude <span class="dt">\</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">-v</span> ~/code/myapp:/workspace/myapp <span class="dt">\</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  workforce0/agent <span class="at">--repos</span> acme/app:/workspace/myapp</span></code></pre></div>
+<p><strong>Token resolution order:</strong> <code>--token</code> flag
+&gt; <code>WF0_TOKEN</code> env var &gt;
+<code>~/.workforce0/token</code> file</p>
+<h3 id="security-model">Security Model</h3>
+<ul>
+<li><strong>Token auth</strong>: SHA-256 hashed, show-once token
+generated via UI. Stored as <code>tokenHash</code> in
+<code>AgentToken</code> table, never in plaintext.</li>
+<li><strong>Docker isolation</strong>: Agent runs as non-root user (uid
+1001) inside a minimal Alpine container. Repo directories are mounted as
+volumes – the agent cannot access the host filesystem beyond mounted
+paths.</li>
+<li><strong><code>--require-approval</code> flag</strong>: When set, the
+agent displays job details in the terminal and waits for explicit
+<code>y/N</code> confirmation before executing. In non-TTY mode (e.g.,
+CI), auto-approves.</li>
+<li><strong>No credentials on Workforce0 servers</strong>: Claude API
+keys (user’s subscription) and repo access stay on the user’s machine.
+The server only sends PRD content and receives results.</li>
+<li><strong>Tool allowlist</strong>: Claude CLI is invoked with
+<code>--allowedTools Edit,Write,Bash,Read,Grep,Glob</code> – no network
+access, no arbitrary tool execution.</li>
+</ul>
+<hr />
+<h2 id="ai-pipeline">AI Pipeline</h2>
+<h3 id="ba-agent-server-side">BA Agent (Server-side)</h3>
+<p>The BA Agent processes meeting transcripts to generate Product
+Requirements Documents.</p>
+<ul>
+<li><strong>Model</strong>: Google Gemini 2.0 Flash (configurable per
+tenant via ModelRegistry)</li>
+<li><strong>Architecture</strong>: <code>BaseConsultant</code> -&gt;
+<code>AgentLoop</code> -&gt; <code>ModelClient</code></li>
+<li><strong>Skill injection</strong>: Foundation skills + learned skills
+injected into system prompt</li>
+<li><strong>Token budget</strong>: 1,500 tokens max for skill injection
+(approx. 6,000 characters)</li>
+<li><strong>Output</strong>: Structured PRD with objectives,
+requirements, acceptance criteria, risks, architecture options</li>
+</ul>
+<h3 id="ai-council-multi-model-consensus">AI Council (Multi-Model
+Consensus)</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> CouncilDecision {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  decision<span class="op">:</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;needs_revision&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;needs_human_review&#39;</span><span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  confidence<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  prd<span class="op">:</span> GeneratedPRD<span class="op">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  critique<span class="op">?:</span> CritiqueResult<span class="op">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  votes<span class="op">:</span> ConsensusVote[]<span class="op">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  consensusReached<span class="op">?:</span> <span class="dt">boolean</span><span class="op">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Model roles by agent type:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Primary (Generate)</th>
+<th>Critique/Review</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BA Agent</td>
+<td>Gemini Flash</td>
+<td>GPT-o1 (adversarial)</td>
+</tr>
+<tr>
+<td>Dev Agent</td>
+<td>Claude Sonnet 4</td>
+<td>Gemini + GPT-o1 (triple review)</td>
+</tr>
+<tr>
+<td>Sales Agent</td>
+<td>Gemini Flash</td>
+<td>GPT-o1</td>
+</tr>
+<tr>
+<td>Marketing Agent</td>
+<td>Gemini Flash</td>
+<td>GPT-o1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Confidence thresholds:</strong> - <code>&gt;= 0.9</code>:
+Auto-approved, no human review needed - <code>0.7 - 0.89</code>:
+Mandatory human review, clarification loop triggered -
+<code>&lt; 0.7</code>: Blocked, escalated to stakeholder - Max 2
+revision loops before escalating to human regardless of confidence</p>
+<p><strong>Fallback chains:</strong> If a model provider is unavailable,
+the council degrades gracefully. The AI Council constructor accepts
+nullable services – when OpenAI is not configured, single-model mode is
+used with Gemini only.</p>
+<h3 id="dev-agent-client-side">Dev Agent (Client-side)</h3>
+<ul>
+<li><strong>Model</strong>: Anthropic Claude Sonnet 4 (user’s own
+subscription)</li>
+<li><strong>Execution</strong>: Runs on user’s machine via Docker
+container</li>
+<li><strong>Process</strong>: Agent spawns <code>claude -p</code> with
+PRD piped via stdin</li>
+<li><strong>Actions</strong>: <code>implement_prd</code>,
+<code>review_pr</code> (extensible)</li>
+<li><strong>Output</strong>: Git commits + pull request (via GitHub
+CLI)</li>
+</ul>
+<h3 id="prompt-construction">Prompt Construction</h3>
+<p>The <code>JobExecutor</code> builds action-specific prompts:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">// implement_prd action</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="vs">`You are an expert software engineer. Your task is to implement the following PRD.</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="vs">Target branch: </span><span class="sc">${</span>branch<span class="sc">}</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="vs">## PRD</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="sc">${</span>prdContent<span class="sc">}</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="vs">## Instructions</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="vs">1. Read the existing codebase to understand its structure and conventions.</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="vs">2. Implement all features described in the PRD.</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="vs">3. Create a git branch named &quot;</span><span class="sc">${</span>branch<span class="sc">}</span><span class="vs">&quot; if it does not already exist.</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="vs">4. Commit all your changes with a descriptive commit message.</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="vs">IMPORTANT: Do NOT push the branch or create a pull request -- just implement, commit, and stop.`</span></span></code></pre></div>
+<p>The agent handles git push and PR creation separately after Claude
+finishes.</p>
+<hr />
+<h2 id="skill-system-self-improving">Skill System (Self-Improving)</h2>
+<h3 id="architecture">Architecture</h3>
+<pre><code>BaseConsultant
+    │
+    ├── consultantConfig.rolePrompt        (agent-specific system prompt)
+    ├── consultantConfig.roleSkillTargets   (which skills to load: [&#39;all&#39;, &#39;ba&#39;])
+    │
+    └── SkillLoader.resolveAllSkills(targets)
+            │
+            ├── Foundation Skills (13 total, immutable, checked into code)
+            │     ├── all/  : security, coding-standards, quality-gates
+            │     ├── ba/   : api-design, database-migrations, prd-patterns
+            │     ├── dev/  : tdd-workflow, security-review, backend-patterns, docker-patterns
+            │     └── qa/   : e2e-testing, test-coverage, security-scan
+            │
+            └── Learned Skills (from DB, cached in Redis, max 5 active)
+                  └── Loaded from LearnedSkill table where status=&#39;active&#39;
+                      Cached for 30 minutes (LEARNED_SKILLS_CACHE_TTL = 1800s)</code></pre>
+<h3 id="skill-types">Skill Types</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> SkillTarget <span class="op">=</span> <span class="st">&#39;all&#39;</span> <span class="op">|</span> <span class="st">&#39;ba&#39;</span> <span class="op">|</span> <span class="st">&#39;dev&#39;</span> <span class="op">|</span> <span class="st">&#39;qa&#39;</span> <span class="op">|</span> <span class="st">&#39;meeting_brain&#39;</span> <span class="op">|</span> <span class="st">&#39;supervisor&#39;</span><span class="op">;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> SkillScope <span class="op">=</span> <span class="st">&#39;foundation&#39;</span> <span class="op">|</span> <span class="st">&#39;learned&#39;</span><span class="op">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> LearnedSkillStatus <span class="op">=</span> <span class="st">&#39;candidate&#39;</span> <span class="op">|</span> <span class="st">&#39;active&#39;</span> <span class="op">|</span> <span class="st">&#39;demoted&#39;</span><span class="op">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> FoundationSkill {</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>       <span class="co">// e.g. &quot;TDD Workflow&quot;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  version<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>    <span class="co">// e.g. &quot;1.0.0&quot;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  target<span class="op">:</span> SkillTarget<span class="op">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  content<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>    <span class="co">// Markdown injected into system prompt</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> LearnedSkill {</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  content<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  target<span class="op">:</span> SkillTarget<span class="op">;</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  confidence<span class="op">:</span> <span class="dt">number</span><span class="op">;</span>       <span class="co">// 0.0 - 1.0</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  sourceOutcomes<span class="op">:</span> <span class="dt">number</span><span class="op">;</span>   <span class="co">// How many outcomes contributed</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  positiveRate<span class="op">:</span> <span class="dt">number</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  negativeRate<span class="op">:</span> <span class="dt">number</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> LearnedSkillStatus<span class="op">;</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="system-prompt-assembly">System Prompt Assembly</h3>
+<p><code>BaseConsultant.buildSystemPrompt()</code> constructs the prompt
+in layers:</p>
+<pre><code>[Role Prompt]                    &lt;- Agent-specific instructions
+[## Firm Methodology]            &lt;- Foundation skills matching target
+[## Institutional Knowledge]     &lt;- Learned skills (token-budgeted)</code></pre>
+<p>Token budget enforcement: Foundation skills fill first, learned
+skills use remaining budget (max 1,500 tokens total for skills, at 4
+chars/token estimate).</p>
+<h3 id="learning-loop">Learning Loop</h3>
+<pre><code>Agent completes task
+    │
+    ▼
+OutcomeObserver.record({ agentType, taskId, result, confidenceScore, toolsUsed, stepCount })
+    │
+    ▼
+MemoryOptimizer (BullMQ job, Gemini-powered)
+    │   Analyzes patterns across outcomes
+    │   Generates skill candidates
+    │
+    ▼
+LearnedSkill created with status=&#39;candidate&#39;, confidence=0.3
+    │
+    ▼
+Promotion criteria: confidence &gt;= threshold, positive outcome rate
+    │
+    ▼
+status=&#39;active&#39; (max 5 active skills per target)</code></pre>
+<h3 id="bloat-prevention">Bloat Prevention</h3>
+<ul>
+<li><strong>Keyword overlap check</strong>: Skills with &gt;60% keyword
+overlap are considered redundant and demoted</li>
+<li><strong>Hard cap</strong>: Maximum 5 active learned skills per
+target type</li>
+<li><strong>Token budget</strong>: 1,500 tokens max for all skill
+injection (foundation + learned)</li>
+<li><strong>Admin kill switch</strong>:
+<code>/api/admin/learned-skills</code> routes allow manual
+demotion/deletion</li>
+</ul>
+<hr />
+<h2 id="dependency-injection">Dependency Injection</h2>
+<p>Services are registered on the Fastify instance via the decorator
+pattern. After <code>setupDependencies()</code>, all services are
+available via <code>app.services.*</code>.</p>
+<h3 id="service-registry">Service Registry</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> Services {</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Infrastructure</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  prisma<span class="op">:</span> PrismaClient<span class="op">;</span>           <span class="co">// With RLS extensions</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  redis<span class="op">:</span> Redis<span class="op">;</span>                    <span class="co">// General caching</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Data Access</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  meetingRepository<span class="op">:</span> MeetingRepository<span class="op">;</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  taskRepository<span class="op">:</span> TaskRepository<span class="op">;</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  prdRepository<span class="op">:</span> PRDRepository<span class="op">;</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Core Business Logic</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  meetingService<span class="op">:</span> MeetingService<span class="op">;</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  baAgentService<span class="op">:</span> BAAgentService<span class="op">;</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  engagementService<span class="op">:</span> EngagementService<span class="op">;</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  queueService<span class="op">:</span> QueueService<span class="op">;</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">// AI</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>  geminiService<span class="op">:</span> GeminiService<span class="op">;</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  openaiService<span class="op">:</span> OpenAIService<span class="op">;</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>  aiCouncil<span class="op">:</span> AICouncil<span class="op">;</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Integrations (nullable = gracefully disabled when unconfigured)</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  jiraService<span class="op">:</span> JiraService<span class="op">;</span></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>  googleChatService<span class="op">:</span> GoogleChatService<span class="op">;</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>  googleDocsService<span class="op">:</span> GoogleDocsService<span class="op">;</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>  githubService<span class="op">:</span> GitHubService <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>  twilioVoiceService<span class="op">:</span> TwilioVoiceService <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>  googleOAuthService<span class="op">:</span> GoogleOAuthService <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Communication</span></span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>  communicationRouter<span class="op">:</span> CommunicationRouter<span class="op">;</span>  <span class="co">// Routes to Slack, Email, Teams, WhatsApp, SMS</span></span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Metering &amp; Audit</span></span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>  usageService<span class="op">:</span> UsageService<span class="op">;</span>      <span class="co">// AI token &amp; cost tracking</span></span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>  auditService<span class="op">:</span> AuditService<span class="op">;</span>      <span class="co">// Action audit log</span></span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>  webhookService<span class="op">:</span> WebhookService<span class="op">;</span>  <span class="co">// Outgoing webhook delivery</span></span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Real-time</span></span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>  sseService<span class="op">:</span> SSEService<span class="op">;</span>         <span class="co">// Server-Sent Events for UI</span></span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>  agentHub<span class="op">:</span> AgentHub<span class="op">;</span>             <span class="co">// WebSocket agent connections</span></span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>  agentJobQueue<span class="op">:</span> AgentJobQueue<span class="op">;</span>   <span class="co">// Job queue for agent dispatch</span></span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Auth</span></span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a>  workosService<span class="op">:</span> WorkOSService <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>  <span class="co">// Enterprise SSO</span></span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Storage &amp; Transcription</span></span>
+<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a>  s3Service<span class="op">:</span> S3Service <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a>  transcriptionService<span class="op">:</span> TranscriptionService <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>  <span class="co">// OpenAI Whisper</span></span>
+<span id="cb15-49"><a href="#cb15-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-50"><a href="#cb15-50" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Meeting</span></span>
+<span id="cb15-51"><a href="#cb15-51" aria-hidden="true" tabindex="-1"></a>  transcriptBuffer<span class="op">:</span> TranscriptBufferService<span class="op">;</span>  <span class="co">// Batches real-time chunks</span></span>
+<span id="cb15-52"><a href="#cb15-52" aria-hidden="true" tabindex="-1"></a>  clarificationTimeoutService<span class="op">:</span> ClarificationTimeoutService<span class="op">;</span></span>
+<span id="cb15-53"><a href="#cb15-53" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="dependency-graph">Dependency Graph</h3>
+<pre><code>PostgreSQL (pg.Pool)
+    │
+    └── PrismaClient (adapter pattern: PrismaPg)
+            │
+            └── createTenantAwarePrisma ($extends for RLS)
+                    │
+                    ├── MeetingRepository ──&gt; MeetingService
+                    ├── TaskRepository    ──&gt; BAAgentService
+                    ├── PRDRepository     ──&gt; JiraService
+                    ├── EngagementService
+                    ├── MemoryService
+                    ├── UsageService
+                    ├── AuditService
+                    └── AgentJobQueue ──&gt; AgentHub
+
+Redis (ioredis)
+    │
+    ├── General caching (main connection)
+    │     └── MemoryService, SkillLoader (learned skill cache)
+    │
+    └── BullMQ (separate connection, maxRetriesPerRequest: null)
+          └── QueueService
+                │
+                └── 10 Job Types:
+                      MEETING_PROCESS, BA_AGENT_PROCESS, JIRA_SYNC,
+                      NOTIFICATION, DEV_AGENT_PROCESS, QA_AGENT_PROCESS,
+                      CLARIFICATION_TIMEOUT, CLARIFICATION_REMINDER,
+                      MEMORY_OPTIMIZER, MEETING_TRANSCRIBE
+
+External APIs
+    │
+    ├── GeminiService ──&gt; AICouncil (primary generator)
+    ├── OpenAIService ──&gt; AICouncil (critique model)
+    ├── JiraService (ticket creation)
+    ├── GoogleChatService (notifications)
+    ├── GoogleDocsService (PRD export)
+    ├── GitHubService (PR management)
+    ├── TwilioVoiceService (dial-in bot)
+    ├── SlackChannel, EmailChannel, TeamsChannel, WhatsAppChannel, SMSChannel
+    ├── S3Service (audio storage)
+    ├── TranscriptionService (Whisper API)
+    ├── GoogleOAuthService (Meet/Drive integration)
+    ├── WorkOSService (enterprise SSO)
+    └── Stripe (billing webhooks)</code></pre>
+<h3 id="graceful-degradation">Graceful Degradation</h3>
+<p>All optional services disable cleanly when their environment
+variables are not set:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Pattern used throughout di-container.ts:</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> githubService <span class="op">=</span> config<span class="op">.</span><span class="at">GITHUB_TOKEN</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">?</span> <span class="kw">new</span> <span class="fu">GitHubService</span>({ token<span class="op">:</span> config<span class="op">.</span><span class="at">GITHUB_TOKEN</span><span class="op">,</span> <span class="op">...</span> })</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">:</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span>githubService) {</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  logger<span class="op">.</span><span class="fu">warn</span>(<span class="st">&#39;GitHubService disabled (no GITHUB_TOKEN configured)&#39;</span>)<span class="op">;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Services that follow this pattern: <code>TwilioVoiceService</code>,
+<code>GitHubService</code>, <code>GoogleOAuthService</code>,
+<code>S3Service</code>, <code>TranscriptionService</code>,
+<code>WorkOSService</code>, <code>MemoryOptimizerAgent</code>. When
+null, dependent code skips the integration rather than throwing.</p>
+<hr />
+<h2 id="api-reference">API Reference</h2>
+<h3 id="authentication">Authentication</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/signup</code></td>
+<td>Create tenant + admin user</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/login</code></td>
+<td>Get JWT access + refresh tokens</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/refresh</code></td>
+<td>Refresh access token</td>
+</tr>
+</tbody>
+</table>
+<p>JWT tokens are delivered as httpOnly cookies
+(<code>wf0_access</code>) with fallback to
+<code>Authorization: Bearer</code> header.</p>
+<h3 id="meetings">Meetings</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/meetings</code></td>
+<td>List meetings (cursor paginated)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/meetings/:id</code></td>
+<td>Get meeting with transcript</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/meetings</code></td>
+<td>Schedule meeting bot</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/meetings/:id</code></td>
+<td>Cancel meeting</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/meetings/:id/transcript</code></td>
+<td>Get transcript segments</td>
+</tr>
+</tbody>
+</table>
+<h3 id="meeting-upload-transcription">Meeting Upload &amp;
+Transcription</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/meetings/upload/transcript</code></td>
+<td>Upload transcript text</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/meetings/upload/audio</code></td>
+<td>Upload audio (S3 + Whisper)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="agents-prds">Agents &amp; PRDs</h3>
+<table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 22%" />
+<col style="width: 48%" />
+</colgroup>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/agents/ba/process</code></td>
+<td>Trigger BA Agent on meeting</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/tasks</code></td>
+<td>List agent tasks</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/tasks/:id</code></td>
+<td>Get task details</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/prds</code></td>
+<td>List PRDs</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/prds/:id</code></td>
+<td>Get PRD</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/agents/prds/:id/approve</code></td>
+<td>Approve PRD</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/agents/prds/:id/reject</code></td>
+<td>Reject PRD</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/agents/prds/:id/tickets</code></td>
+<td>Generate Jira tickets</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/prds/:id/download</code></td>
+<td>Download PRD as document</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/agents/clarifications/:id/respond</code></td>
+<td>Answer clarification</td>
+</tr>
+</tbody>
+</table>
+<h3 id="agent-hub-token-management-job-status">Agent Hub (Token
+Management &amp; Job Status)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/agents/tokens</code></td>
+<td>Create agent token (returned once)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/tokens</code></td>
+<td>List tokens (hints only)</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/agents/tokens/:id</code></td>
+<td>Revoke token</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/status</code></td>
+<td>Connected agents status</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/agents/jobs</code></td>
+<td>List agent jobs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="engagements">Engagements</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/engagements</code></td>
+<td>List engagements</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/engagements/:id</code></td>
+<td>Get engagement details</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/engagements/:id/advance</code></td>
+<td>Advance lifecycle phase</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/engagements/:id/pause</code></td>
+<td>Pause engagement</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/engagements/:id/resume</code></td>
+<td>Resume engagement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="model-configuration">Model Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/models/config</code></td>
+<td>Get tenant model configuration</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/models/config</code></td>
+<td>Update model assignments per agent</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/models/available</code></td>
+<td>List available models</td>
+</tr>
+</tbody>
+</table>
+<h3 id="team-communication">Team &amp; Communication</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/team</code></td>
+<td>List team members</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/team</code></td>
+<td>Add team member</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/team/:id</code></td>
+<td>Update member (channel, role)</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/team/:id</code></td>
+<td>Remove team member</td>
+</tr>
+</tbody>
+</table>
+<h3 id="settings-dashboard">Settings &amp; Dashboard</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/settings</code></td>
+<td>Get tenant settings</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/settings</code></td>
+<td>Update tenant settings</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/dashboard</code></td>
+<td>Dashboard aggregated data</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notifications-events">Notifications &amp; Events</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/notifications</code></td>
+<td>List in-app notifications</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/events/stream</code></td>
+<td>SSE event stream</td>
+</tr>
+</tbody>
+</table>
+<h3 id="webhooks-outgoing">Webhooks (Outgoing)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/webhooks</code></td>
+<td>List webhook endpoints</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/webhooks</code></td>
+<td>Create webhook endpoint</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/webhooks/:id</code></td>
+<td>Update endpoint</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/webhooks/:id</code></td>
+<td>Delete endpoint</td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit-log">Audit Log</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/audit-log</code></td>
+<td>Query audit events</td>
+</tr>
+</tbody>
+</table>
+<h3 id="admin">Admin</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/admin/learned-skills</code></td>
+<td>List learned skills</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/admin/learned-skills/:id</code></td>
+<td>Demote/activate skill</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/admin/learned-skills/:id</code></td>
+<td>Delete skill</td>
+</tr>
+</tbody>
+</table>
+<h3 id="webhooks-incoming-no-auth-signature-verified">Webhooks
+(Incoming, no auth – signature verified)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/webhooks/jira</code></td>
+<td>Jira event callbacks</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/webhooks/github</code></td>
+<td>GitHub event callbacks</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/webhooks/gchat</code></td>
+<td>Google Chat interaction</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/webhooks/google-drive</code></td>
+<td>Drive change notifications</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/webhooks/stripe</code></td>
+<td>Stripe billing events</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/webhooks/twilio/*</code></td>
+<td>Twilio voice callbacks</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/webhooks/health</code></td>
+<td>Webhook health check</td>
+</tr>
+</tbody>
+</table>
+<h3 id="websocket-endpoints">WebSocket Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Protocol</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/agent/ws</code></td>
+<td>WSS</td>
+<td>Agent hub (token auth)</td>
+</tr>
+<tr>
+<td><code>/media-stream/</code></td>
+<td>WSS</td>
+<td>Twilio voice media stream</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="deployment">Deployment</h2>
+<h3 id="requirements">Requirements</h3>
+<ul>
+<li>Docker + Docker Compose</li>
+<li>PostgreSQL 15+</li>
+<li>Redis 7+</li>
+<li>Node.js 20+ (if running without Docker)</li>
+</ul>
+<h3 id="docker-compose-production">Docker Compose (Production)</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># docker-compose.prod.yml</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">services</span><span class="kw">:</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">postgres</span><span class="kw">:</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">image</span><span class="kw">:</span><span class="at"> postgres:15-alpine</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumes</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">postgres_data:/var/lib/postgresql/data</span><span class="kw">]</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">healthcheck</span><span class="kw">:</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">test</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;CMD-SHELL&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;pg_isready -U ${POSTGRES_USER:-postgres}&quot;</span><span class="kw">]</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">redis</span><span class="kw">:</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">image</span><span class="kw">:</span><span class="at"> redis:7-alpine</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumes</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">redis_data:/data</span><span class="kw">]</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">healthcheck</span><span class="kw">:</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">test</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;CMD&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;redis-cli&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;ping&quot;</span><span class="kw">]</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">backend</span><span class="kw">:</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">build</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">context</span><span class="kw">:</span><span class="at"> ./mvp </span><span class="kw">}</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">environment</span><span class="kw">:</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">NODE_ENV</span><span class="kw">:</span><span class="at"> production</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">DATABASE_URL</span><span class="kw">:</span><span class="at"> postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">REDIS_URL</span><span class="kw">:</span><span class="at"> redis://redis:6379</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">ports</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;${BACKEND_PORT:-3000}:3000&quot;</span><span class="kw">]</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">depends_on</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">postgres</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">condition</span><span class="kw">:</span><span class="at"> service_healthy </span><span class="kw">},</span><span class="at"> </span><span class="fu">redis</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">condition</span><span class="kw">:</span><span class="at"> service_healthy </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">healthcheck</span><span class="kw">:</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">test</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;CMD-SHELL&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;wget -qO- http://localhost:3000/health || exit 1&quot;</span><span class="kw">]</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">frontend</span><span class="kw">:</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">build</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">context</span><span class="kw">:</span><span class="at"> ./frontend</span><span class="kw">,</span><span class="at"> </span><span class="fu">args</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">BACKEND_URL</span><span class="kw">:</span><span class="at"> http://backend:3000 </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">ports</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;${FRONTEND_PORT:-3001}:3001&quot;</span><span class="kw">]</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">depends_on</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">backend</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">condition</span><span class="kw">:</span><span class="at"> service_healthy </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span></code></pre></div>
+<h3 id="environment-variables">Environment Variables</h3>
+<p><strong>Required:</strong></p>
+<table>
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>PostgreSQL connection string</td>
+</tr>
+<tr>
+<td><code>REDIS_URL</code></td>
+<td>Redis connection string (default:
+<code>redis://localhost:6379</code>)</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>32+ character secret for JWT signing</td>
+</tr>
+</tbody>
+</table>
+<p><strong>AI Models (at least one required):</strong></p>
+<table>
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GEMINI_API_KEY</code></td>
+<td>Google Gemini API key (BA Agent, primary generator)</td>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code></td>
+<td>OpenAI API key (GPT-o1 critique, Whisper transcription, voice
+bot)</td>
+</tr>
+<tr>
+<td><code>ANTHROPIC_API_KEY</code></td>
+<td>Reserved for server-side Claude integration</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Optional Integrations:</strong></p>
+<table>
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>JIRA_API_TOKEN</code>, <code>JIRA_EMAIL</code>,
+<code>JIRA_BASE_URL</code></td>
+<td>Jira ticket creation</td>
+</tr>
+<tr>
+<td><code>GCHAT_WEBHOOK_URL</code></td>
+<td>Google Chat notifications</td>
+</tr>
+<tr>
+<td><code>GOOGLE_SERVICE_ACCOUNT_KEY</code>,
+<code>GOOGLE_DRIVE_FOLDER_ID</code></td>
+<td>Google Docs PRD export</td>
+</tr>
+<tr>
+<td><code>GOOGLE_CLIENT_ID</code>,
+<code>GOOGLE_CLIENT_SECRET</code></td>
+<td>Google Meet OAuth (per-user)</td>
+</tr>
+<tr>
+<td><code>GITHUB_TOKEN</code>, <code>GITHUB_DEFAULT_OWNER</code>,
+<code>GITHUB_DEFAULT_REPO</code></td>
+<td>GitHub integration</td>
+</tr>
+<tr>
+<td><code>SLACK_BOT_TOKEN</code></td>
+<td>Slack notifications</td>
+</tr>
+<tr>
+<td><code>SENDGRID_API_KEY</code>, <code>EMAIL_FROM</code></td>
+<td>Email notifications</td>
+</tr>
+<tr>
+<td><code>TEAMS_WEBHOOK_URL</code></td>
+<td>Microsoft Teams notifications</td>
+</tr>
+<tr>
+<td><code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>,
+<code>TWILIO_PHONE_NUMBER</code></td>
+<td>Voice + WhatsApp + SMS</td>
+</tr>
+<tr>
+<td><code>AWS_S3_BUCKET</code>, <code>AWS_ACCESS_KEY_ID</code>,
+<code>AWS_SECRET_ACCESS_KEY</code></td>
+<td>Meeting audio storage</td>
+</tr>
+<tr>
+<td><code>STRIPE_SECRET_KEY</code>,
+<code>STRIPE_WEBHOOK_SECRET</code></td>
+<td>Billing</td>
+</tr>
+<tr>
+<td><code>WORKOS_API_KEY</code>, <code>WORKOS_CLIENT_ID</code></td>
+<td>Enterprise SSO</td>
+</tr>
+<tr>
+<td><code>WEBHOOK_BASE_URL</code></td>
+<td>Base URL for incoming webhooks (ngrok in dev)</td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code>,
+<code>OTEL_SERVICE_NAME</code></td>
+<td>OpenTelemetry tracing</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Redis HA (Sentinel):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>REDIS_SENTINEL_HOSTS</code></td>
+<td>Comma-separated host:port pairs</td>
+</tr>
+<tr>
+<td><code>REDIS_SENTINEL_MASTER</code></td>
+<td>Master name (default: <code>mymaster</code>)</td>
+</tr>
+<tr>
+<td><code>REDIS_PASSWORD</code></td>
+<td>Auth password</td>
+</tr>
+<tr>
+<td><code>REDIS_DB</code></td>
+<td>Database index (0-15, default: 0)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="async-job-processing">Async Job Processing</h2>
+<p>BullMQ processes 10 job types with separate workers:</p>
+<table>
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 29%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr>
+<th>Job Type</th>
+<th>Trigger</th>
+<th>Processing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MEETING_PROCESS</code></td>
+<td>Meeting status -&gt; completed</td>
+<td>Extract transcript, update metadata</td>
+</tr>
+<tr>
+<td><code>BA_AGENT_PROCESS</code></td>
+<td>Manual or auto after meeting</td>
+<td>Generate PRD via Gemini + AI Council</td>
+</tr>
+<tr>
+<td><code>JIRA_SYNC</code></td>
+<td>PRD approved + tickets created</td>
+<td>Push tickets to Jira API</td>
+</tr>
+<tr>
+<td><code>NOTIFICATION</code></td>
+<td>Various events</td>
+<td>Route to configured channel</td>
+</tr>
+<tr>
+<td><code>DEV_AGENT_PROCESS</code></td>
+<td>PRD approved</td>
+<td>Dispatch to AgentHub for implementation</td>
+</tr>
+<tr>
+<td><code>QA_AGENT_PROCESS</code></td>
+<td>Implementation complete</td>
+<td>Dispatch for code review</td>
+</tr>
+<tr>
+<td><code>CLARIFICATION_TIMEOUT</code></td>
+<td>Periodic (every 1 hour)</td>
+<td>Expire stale clarification requests</td>
+</tr>
+<tr>
+<td><code>CLARIFICATION_REMINDER</code></td>
+<td>Scheduled</td>
+<td>Re-send unanswered clarifications</td>
+</tr>
+<tr>
+<td><code>MEMORY_OPTIMIZER</code></td>
+<td>After outcome recording</td>
+<td>Consolidate tenant memory + skill candidates</td>
+</tr>
+<tr>
+<td><code>MEETING_TRANSCRIBE</code></td>
+<td>Audio upload</td>
+<td>S3 -&gt; Whisper API -&gt; transcript</td>
+</tr>
+</tbody>
+</table>
+<p>Dead letter queue (DLQ) creates in-app notifications for failed jobs
+so tenants can see failures in the UI.</p>
+<hr />
+<h2 id="engagement-lifecycle">Engagement Lifecycle</h2>
+<p>The Engagement model implements a state machine tracking the full
+lifecycle of a product initiative:</p>
+<pre><code>listen ──&gt; understand ──&gt; analyze_ask ──&gt; approve ──&gt; build ──&gt; test ──&gt; ship ──&gt; learn
+  │                          │                │                   │
+  │                    Clarification      Human review       QA Agent
+  │                    loop active        required           dispatched
+  │
+  Meeting recording
+  in progress</code></pre>
+<p>Phase transitions are driven by
+<code>EngagementService.advancePhase()</code>, which can auto-dispatch
+agents via the queue service. The engagement tracks the current
+<code>agentType</code>, <code>phase</code>, <code>status</code>
+(active/paused/completed/failed), and <code>confidence</code> score.</p>
+<hr />
+<h2 id="communication-router">Communication Router</h2>
+<p>Multi-channel message delivery with automatic routing based on team
+member preferences:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Channel adapters registered at startup:</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> channels<span class="op">:</span> ChannelAdapter[] <span class="op">=</span> [</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  SlackChannel<span class="op">,</span>     <span class="co">// Bot token (xoxb-...)</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  EmailChannel<span class="op">,</span>     <span class="co">// SendGrid API (stub mode if unconfigured)</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  WhatsAppChannel<span class="op">,</span>  <span class="co">// Twilio</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  TeamsChannel<span class="op">,</span>     <span class="co">// Incoming Webhook</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  SMSChannel<span class="op">,</span>       <span class="co">// Twilio</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>communicationRouter<span class="op">.</span><span class="fu">send</span>({</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  recipientId<span class="op">:</span> teamMember<span class="op">.</span><span class="at">id</span><span class="op">,</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  messageType<span class="op">:</span> <span class="st">&#39;clarification&#39;</span><span class="op">,</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  content<span class="op">:</span> <span class="st">&#39;What authentication method should the API use?&#39;</span><span class="op">,</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  engagementId<span class="op">:</span> engagement<span class="op">.</span><span class="at">id</span><span class="op">,</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Routes to member&#39;s preferredChannel, logs in MessageLog table</span></span></code></pre></div>
+<hr />
+<h2 id="testing">Testing</h2>
+<p>Backend test suite uses Vitest. Frontend uses Vitest for unit tests
+and Playwright for E2E.</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Backend</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> mvp</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> test              <span class="co"># Vitest run</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run smoke-test    <span class="co"># Quick health check</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Frontend</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> frontend</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> test              <span class="co"># Vitest run</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run test:e2e      <span class="co"># Playwright</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run test:e2e:ui   <span class="co"># Playwright interactive UI</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Agent</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> agent</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> test              <span class="co"># Vitest run</span></span></code></pre></div>
+<p><strong>Test philosophy from AGENTS.md:</strong> - TDD workflow: RED
+(failing test) -&gt; GREEN (minimal implementation) -&gt; REFACTOR -
+Unit tests for services, integration tests for routes, E2E for critical
+flows - 80%+ coverage target - Never fix tests to match broken code –
+fix the code</p>
+<hr />
+<h2 id="integration-points">Integration Points</h2>
+<h3 id="jira">Jira</h3>
+<ul>
+<li><strong>Direction</strong>: One-way (PRD -&gt; Jira tickets)</li>
+<li><strong>Mechanism</strong>: REST API via <code>JiraService</code>,
+triggered by <code>JIRA_SYNC</code> BullMQ job</li>
+<li><strong>Ticket types</strong>: Story, Task, Bug, Epic with story
+points, acceptance criteria, labels</li>
+<li><strong>Webhook</strong>: Incoming <code>/webhooks/jira</code> for
+status sync back to <code>JiraTicket.externalKey</code></li>
+<li><strong>Configuration</strong>: API token + email + base URL via
+Settings UI</li>
+</ul>
+<h3 id="github">GitHub</h3>
+<ul>
+<li><strong>Direction</strong>: Bidirectional</li>
+<li><strong>Outbound</strong>: PR creation, branch management via
+<code>GitHubService</code> (PAT or GitHub App token)</li>
+<li><strong>Inbound</strong>: <code>/webhooks/github</code> for PR
+events (merge, review)</li>
+<li><strong>Used by</strong>: Dev Agent (implementation PRs) and QA
+Agent (review feedback)</li>
+</ul>
+<h3 id="google-meet">Google Meet</h3>
+<ul>
+<li><strong>OAuth</strong>: Per-user OAuth flow via
+<code>GoogleOAuthService</code></li>
+<li><strong>Flow</strong>: User authorizes -&gt; Drive webhook watches
+for new recordings -&gt; auto-extract transcript</li>
+<li><strong>Token storage</strong>: AES-256-GCM encrypted in
+<code>GoogleOAuthToken</code> table</li>
+</ul>
+<h3 id="google-docs">Google Docs</h3>
+<ul>
+<li><strong>Direction</strong>: One-way export (PRD -&gt; Google
+Doc)</li>
+<li><strong>Mechanism</strong>: Service account credentials, writes to
+configured Drive folder</li>
+<li><strong>Stored</strong>: <code>PRD.googleDocId</code> and
+<code>PRD.googleDocUrl</code></li>
+</ul>
+<h3 id="twilio-voice">Twilio (Voice)</h3>
+<ul>
+<li><strong>Dial-in bot</strong>: Users call a phone number, Twilio
+streams audio via WebSocket (<code>/media-stream/</code>), processed by
+OpenAI Realtime API</li>
+<li><strong>Voice data</strong>: Requirements, decisions, action items
+captured in meeting metadata</li>
+<li><strong>Channels</strong>: Also powers WhatsApp and SMS via
+communication router</li>
+</ul>
+<h3 id="stripe-billing">Stripe (Billing)</h3>
+<ul>
+<li><strong>Subscription tiers</strong>: free_trial, starter, team,
+business, enterprise</li>
+<li><strong>Usage tracking</strong>: <code>meetingsUsedThisMonth</code>,
+<code>prdsUsedThisMonth</code> on Tenant</li>
+<li><strong>Webhooks</strong>: <code>/webhooks/stripe</code> for
+subscription lifecycle events</li>
+</ul>
+<hr />
+<h2 id="roadmap">Roadmap</h2>
+<table>
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 33%" />
+<col style="width: 29%" />
+</colgroup>
+<thead>
+<tr>
+<th>Timeline</th>
+<th>Feature</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Now</td>
+<td>BA Agent + PRD pipeline</td>
+<td>Validated</td>
+</tr>
+<tr>
+<td>Now</td>
+<td>WebSocket Agent Hub + Dev Agent</td>
+<td>Validated</td>
+</tr>
+<tr>
+<td>Now</td>
+<td>Multi-channel communication</td>
+<td>Implemented</td>
+</tr>
+<tr>
+<td>Sprint 2</td>
+<td>Email digest, advanced voice features</td>
+<td>In progress</td>
+</tr>
+<tr>
+<td>Sprint 3</td>
+<td>Zoom/Teams connectors, ROI dashboard</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>Series A</td>
+<td>Industry templates, managed VMs, native installers</td>
+<td>Planned</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="architecture-decisions">Architecture Decisions</h2>
+<h3 id="why-fastify-not-express">Why Fastify (not Express)?</h3>
+<p>Fastify’s plugin system provides natural dependency injection via
+<code>decorate()</code>. The schema-based validation (integrated with
+Zod) catches malformed requests before they hit business logic. Fastify
+5 benchmarks at ~2x Express throughput with lower memory overhead.</p>
+<h3 id="why-prisma-7-with-pg-adapter">Why Prisma 7 with pg adapter?</h3>
+<p>Prisma 7’s adapter pattern (<code>@prisma/adapter-pg</code>) allows
+using a raw <code>pg.Pool</code> underneath, which enables connection
+pooling and direct SQL when needed. The <code>$extends</code> API powers
+the RLS middleware without requiring database-level row policies.</p>
+<h3 id="why-separate-redis-connections">Why separate Redis
+connections?</h3>
+<p>BullMQ requires <code>maxRetriesPerRequest: null</code> on its Redis
+connection to handle blocking operations. Using the same connection for
+caching would break general Redis operations. The codebase creates two
+connections: one for caching (SkillLoader, MemoryService) and one for
+BullMQ workers.</p>
+<h3 id="why-client-side-dev-agent">Why client-side Dev Agent?</h3>
+<p>Running code generation on the user’s machine solves three problems:
+(1) no need to store repo credentials on Workforce0 servers, (2) users
+bring their own Claude subscription, and (3) Docker isolation ensures
+the agent cannot access anything beyond mounted volumes. The tradeoff is
+operational complexity for the user (Docker setup), mitigated by the
+one-line Docker run command.</p>
+<hr />
+<p><em>Built with TypeScript. Multi-tenant. Multi-model AI. WebSocket
+agent architecture. Self-improving skill system.</em></p>
+</body>
+</html>

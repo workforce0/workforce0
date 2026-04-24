@@ -1,0 +1,194 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "name": "Workforce0",
+  "description": "Open-source self-hosted AI workforce platform. Paste your Gemini API key and go — PostgreSQL, Redis, Fastify backend, and Next.js frontend deploy automatically.",
+  "icon": "https://raw.githubusercontent.com/workforce0/workforce0/main/docs/assets/logo.svg",
+  "tags": ["ai", "workforce", "gemini", "fastify", "nextjs", "postgres", "redis"],
+  "services": [
+    {
+      "name": "Postgres",
+      "icon": "https://devicons.railway.app/i/postgresql.svg",
+      "source": {
+        "image": "postgres:15-alpine"
+      },
+      "variables": {
+        "POSTGRES_USER": {
+          "default": "postgres",
+          "description": "PostgreSQL superuser name"
+        },
+        "POSTGRES_PASSWORD": {
+          "description": "Strong password for the Postgres superuser. Generate with: openssl rand -base64 32",
+          "isOptional": false,
+          "generator": "SECRET"
+        },
+        "POSTGRES_DB": {
+          "default": "workforce0",
+          "description": "Default application database name"
+        },
+        "PGDATA": {
+          "default": "/var/lib/postgresql/data/pgdata",
+          "description": "Where Postgres stores its data on the mounted volume"
+        },
+        "DATABASE_URL": {
+          "default": "postgresql://${{POSTGRES_USER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{POSTGRES_DB}}",
+          "description": "Internal connection string exposed to other services via ${{Postgres.DATABASE_URL}}"
+        }
+      },
+      "volumes": [
+        {
+          "mountPath": "/var/lib/postgresql/data",
+          "name": "postgres-data"
+        }
+      ],
+      "tcpProxyApplicationPort": 5432,
+      "healthcheckPath": null
+    },
+    {
+      "name": "Redis",
+      "icon": "https://devicons.railway.app/i/redis.svg",
+      "source": {
+        "image": "redis:7-alpine"
+      },
+      "variables": {
+        "REDIS_URL": {
+          "default": "redis://${{RAILWAY_PRIVATE_DOMAIN}}:6379",
+          "description": "Internal Redis URL exposed to other services via ${{Redis.REDIS_URL}}"
+        }
+      },
+      "volumes": [
+        {
+          "mountPath": "/data",
+          "name": "redis-data"
+        }
+      ],
+      "tcpProxyApplicationPort": 6379
+    },
+    {
+      "name": "Backend",
+      "icon": "https://devicons.railway.app/i/nodejs.svg",
+      "source": {
+        "repo": "workforce0/workforce0",
+        "rootDirectory": "mvp"
+      },
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "Dockerfile"
+      },
+      "deploy": {
+        "startCommand": "dumb-init node dist/index.js",
+        "healthcheckPath": "/health",
+        "healthcheckTimeout": 30,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "variables": {
+        "NODE_ENV": {
+          "default": "production",
+          "description": "Node runtime mode"
+        },
+        "PORT": {
+          "default": "3000",
+          "description": "Port the Fastify server listens on"
+        },
+        "DATABASE_URL": {
+          "default": "${{Postgres.DATABASE_URL}}",
+          "description": "Auto-wired from the Postgres service"
+        },
+        "REDIS_URL": {
+          "default": "${{Redis.REDIS_URL}}",
+          "description": "Auto-wired from the Redis service"
+        },
+        "JWT_SECRET": {
+          "description": "32+ character secret used to sign JWTs. Generate with: openssl rand -base64 32",
+          "isOptional": false,
+          "generator": "SECRET"
+        },
+        "GEMINI_API_KEY": {
+          "description": "Your Google Gemini API key (free tier works). Get one: https://aistudio.google.com/app/apikey",
+          "isOptional": false
+        },
+        "ANTHROPIC_API_KEY": {
+          "default": "",
+          "description": "Optional — enables Claude in the AI Council. Get one: https://console.anthropic.com/settings/keys",
+          "isOptional": true
+        },
+        "OPENAI_API_KEY": {
+          "default": "",
+          "description": "Optional — enables OpenAI in the AI Council. Get one: https://platform.openai.com/api-keys",
+          "isOptional": true
+        },
+        "PUBLIC_URL": {
+          "default": "https://${{Frontend.RAILWAY_PUBLIC_DOMAIN}}",
+          "description": "Public URL where users access Workforce0 (auto-derived from the Frontend service's Railway domain)"
+        },
+        "CORS_ORIGINS": {
+          "default": "https://${{Frontend.RAILWAY_PUBLIC_DOMAIN}}",
+          "description": "Allowed origins for CORS (defaults to the frontend's public domain)"
+        },
+        "LOG_LEVEL": {
+          "default": "info",
+          "description": "Log level: trace | debug | info | warn | error"
+        },
+        "RATE_LIMIT_MAX": {
+          "default": "100",
+          "description": "Max requests per window per IP"
+        },
+        "RATE_LIMIT_WINDOW": {
+          "default": "60000",
+          "description": "Rate limit window in ms"
+        },
+        "ENABLE_AI_FALLBACK": {
+          "default": "true",
+          "description": "If a model in the AI Council fails, fall back to the next available one"
+        }
+      }
+    },
+    {
+      "name": "Frontend",
+      "icon": "https://devicons.railway.app/i/nextjs.svg",
+      "source": {
+        "repo": "workforce0/workforce0",
+        "rootDirectory": "frontend"
+      },
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "Dockerfile",
+        "buildArgs": {
+          "BACKEND_URL": "http://${{Backend.RAILWAY_PRIVATE_DOMAIN}}:3000"
+        }
+      },
+      "deploy": {
+        "startCommand": "node server.js",
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "domains": [
+        {
+          "hasServiceDomain": true
+        }
+      ],
+      "variables": {
+        "NODE_ENV": {
+          "default": "production",
+          "description": "Node runtime mode"
+        },
+        "PORT": {
+          "default": "3001",
+          "description": "Port Next.js listens on"
+        },
+        "HOSTNAME": {
+          "default": "0.0.0.0",
+          "description": "Bind address for the Next.js server"
+        },
+        "BACKEND_URL": {
+          "default": "http://${{Backend.RAILWAY_PRIVATE_DOMAIN}}:3000",
+          "description": "Internal URL of the backend service (used for server-side API calls)"
+        },
+        "NEXT_PUBLIC_BACKEND_URL": {
+          "default": "https://${{Backend.RAILWAY_PUBLIC_DOMAIN}}",
+          "description": "Public backend URL exposed to the browser (only needed if the frontend calls the backend directly from the client)"
+        }
+      }
+    }
+  ]
+}

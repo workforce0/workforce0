@@ -1,0 +1,57 @@
+# CODEOWNERS for Workforce0
+#
+# This file defines who is automatically requested for review when a pull
+# request modifies matching paths. Rules are evaluated top-to-bottom; the
+# LAST matching pattern takes precedence. Patterns follow a subset of
+# gitignore syntax.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Current status: solo-maintained OSS project. As the community grows,
+# domain-specific owners will be added below. See the note at the bottom
+# for how to become a code owner for a given area.
+
+# -----------------------------------------------------------------------------
+# Default owner — applies to every file unless a later rule overrides it.
+# -----------------------------------------------------------------------------
+*                                   @ithadmin
+
+# -----------------------------------------------------------------------------
+# Security-sensitive paths
+# TODO: add a second maintainer here once the project has more contributors,
+# so security-critical changes always get a second set of eyes.
+# -----------------------------------------------------------------------------
+SECURITY.md                         @ithadmin
+/.github/                           @ithadmin
+/.github/workflows/                 @ithadmin
+
+# Auth, encryption, and request middleware — handle with extra care.
+/mvp/src/services/auth/             @ithadmin
+/mvp/src/lib/encryption*            @ithadmin
+/mvp/src/middleware/                @ithadmin
+
+# Database migrations are irreversible in production; review carefully.
+/mvp/prisma/migrations/             @ithadmin
+
+# -----------------------------------------------------------------------------
+# Frontend stack
+# Reserved for a future frontend lead; currently owned by @ithadmin.
+# -----------------------------------------------------------------------------
+/frontend/                          @ithadmin
+
+# -----------------------------------------------------------------------------
+# Agent daemon (user-side lightweight agent)
+# -----------------------------------------------------------------------------
+/agent/                             @ithadmin
+
+# -----------------------------------------------------------------------------
+# Third-party integrations (Jira, Google Chat, Drive, Twilio, WorkOS, ...)
+# -----------------------------------------------------------------------------
+/mvp/src/services/integrations/     @ithadmin
+
+# -----------------------------------------------------------------------------
+# How to become a code owner
+#
+# To become a code owner for an area, open an issue proposing it and
+# contribute 3+ merged PRs in that area.
+# -----------------------------------------------------------------------------

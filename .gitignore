@@ -1,0 +1,62 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Office temp files
+~$*
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code / Serena local config
+.claude/
+.serena/
+
+# Node
+node_modules/
+npm-debug.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Logs
+*.log
+
+# Windows artifacts
+nul
+
+# Build outputs
+dist/
+build/
+
+# Credentials (NEVER commit)
+*-service-account*.json
+gen-lang-client*.json
+credentials*.json
+orbital-falcon-*.json
+**/tests/prd-output.json
+
+# Playwright MCP temp files
+.playwright-mcp/
+docs-site/node_modules
+docs-site/.astro
+docs-site/dist
+docs-site/.DS_Store
+
+# Dev-tool artifacts (added for public launch)
+.claude/
+.serena/
+.superpowers/
+.playwright-mcp/
+.DS_Store
+**/.DS_Store
+graphify-out/
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo

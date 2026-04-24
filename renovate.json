@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 8am on monday"],
+  "semanticCommits": "enabled",
+  "prConcurrentLimit": 5,
+  "ignorePaths": ["node_modules", "**/dist", "**/.next"],
+  "docker": {
+    "pinDigests": true
+  },
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "pinDigests": true,
+      "versioning": "docker"
+    },
+    {
+      "matchPackagePatterns": ["^@types/"],
+      "groupName": "type definitions",
+      "groupSlug": "types"
+    },
+    {
+      "matchPackageNames": ["next", "react", "react-dom"],
+      "groupName": "Next.js ecosystem",
+      "groupSlug": "nextjs-ecosystem"
+    },
+    {
+      "matchPackagePatterns": ["^@prisma/"],
+      "matchPackageNames": ["prisma"],
+      "groupName": "Prisma",
+      "groupSlug": "prisma"
+    }
+  ]
+}

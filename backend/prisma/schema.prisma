@@ -1,0 +1,1456 @@
+// =============================================================================
+// MVP PRISMA SCHEMA - Product Agent
+// =============================================================================
+//
+// Focused schema for the MVP demo flow:
+// Meeting → Transcript → PRD → Jira Tickets
+//
+// Run migrations from mvp/ folder:
+// npx prisma migrate dev --schema=./prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Tenant (Multi-tenancy support)
+// ============================================================
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meetings               Meeting[]
+  tasks                  AgentTask[]
+  prds                   PRD[]
+  users                  User[]
+  invitations            Invitation[]
+  googleOAuthTokens      GoogleOAuthToken[]
+  agentTokens            AgentToken[]
+  integrationConnections IntegrationConnection[]
+  skills                 Skill[]
+  scheduledJobs          ScheduledJob[]
+  goals                  Goal[]
+  projects               Project[]
+
+  @@map("tenants")
+}
+
+// ============================================================
+// Scheduled Jobs (Hermes III M7 cron scheduler)
+// ============================================================
+//
+// User-facing "run this every Monday 9am" jobs. Orchestrated by
+// CronSchedulerService on top of BullMQ repeatable jobs.
+
+model ScheduledJob {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String // human-readable
+  cronExpression String // e.g. "0 9 * * 1" (Mondays 9am)
+  timezone       String    @default("UTC")
+  jobType        String // e.g. "digest_email", "slack_reminder"
+  payload        Json      @default("{}")
+  enabled        Boolean   @default(true)
+  lastRunAt      DateTime?
+  lastStatus     String? // "success" | "error"
+  lastError      String?
+  nextRunAt      DateTime?
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId, enabled])
+  @@map("scheduled_jobs")
+}
+
+// ============================================================
+// Integration Connections (BYOK credential vault)
+// ============================================================
+//
+// Generic store for per-tenant credentials for any integration the user
+// connects via the in-app wizard (Jira, Slack, GitHub, Linear, Notion, etc.).
+//
+// Credentials are AES-256-GCM encrypted via lib/encryption.ts using a key
+// derived from JWT_SECRET (or ENCRYPTION_KEY if set). Never logged, never
+// returned from the API in plaintext.
+//
+// `metadata` holds human-readable context (default project key, connected
+// email, selected workspace) that IS safe to return to the UI.
+
+// ============================================================
+// Skills (Hermes-inspired user-message injection)
+// ============================================================
+//
+// Markdown playbooks a user can invoke with a `/slug` command to steer
+// the AI. Body becomes a USER-message activation prompt (see AGENTS.md
+// § "Skills as User-Message Injection") — never a system-prompt mutation,
+// so prompt caching stays warm.
+//
+// Managed via the UI (no filesystem, no CLI) — uploaded skills are
+// parsed with gray-matter-style frontmatter and stored here.
+
+model Skill {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug            String // lowercased, dash-separated, used as /slug command
+  name            String // human-readable display name
+  description     String
+  body            String   @db.Text
+  platforms       String[] @default([]) // empty = all; ["darwin","linux","windows"]
+  disabled        Boolean  @default(false)
+  configSchema    Json? // [{key,description,default,prompt}] from frontmatter
+  supportingFiles Json? // list of {name, content} for /skill_view-style lookup
+  createdBy       String? // user.id
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, disabled])
+  @@map("skills")
+}
+
+model IntegrationConnection {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String // 'jira' | 'slack' | 'github' | 'linear' | 'notion' | 'gchat' | 'gdocs' | 'gdrive' | 'twilio'
+  status       String    @default("disconnected") // disconnected | connected | action_needed | error
+  credentials  String    @default("") // encrypted blob (iv:tag:ciphertext)
+  metadata     Json      @default("{}")
+  lastTestedAt DateTime?
+  lastError    String?
+  connectedBy  String? // user.id who ran the wizard
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId, status])
+  @@map("integration_connections")
+}
+
+// ============================================================
+// Users (Multi-user support)
+// ============================================================
+
+model User {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  email        String
+  passwordHash String
+  name         String
+  role         String    @default("member") // owner, admin, member, viewer
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+// ============================================================
+// Invitations
+// ============================================================
+
+model Invitation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  email     String
+  role      String   @default("member") // admin, member, viewer
+  token     String   @unique
+  status    String   @default("pending") // pending, accepted, expired
+  invitedBy String // User ID
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([token])
+  @@map("invitations")
+}
+
+// ============================================================
+// Google OAuth Tokens (per-user, for Google Meet/Drive)
+// ============================================================
+
+model GoogleOAuthToken {
+  id             String    @id @default(cuid())
+  tenantId       String
+  userId         String
+  email          String
+  accessToken    String // encrypted via AES-256-GCM
+  refreshToken   String // encrypted via AES-256-GCM
+  expiresAt      DateTime
+  driveChannelId String?
+  channelExpiry  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+// ============================================================
+// Meeting & Transcript
+// ============================================================
+
+model Meeting {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  /// P1: which project this meeting rolls up to. Nullable for backward
+  /// compat; migration backfills every existing row to the tenant's
+  /// Default project.
+  projectId    String?
+  project      Project?  @relation(fields: [projectId], references: [id])
+  externalId   String? // Recall.ai bot ID
+  title        String
+  startTime    DateTime
+  endTime      DateTime?
+  status       String    @default("scheduled") // scheduled, joining, in_progress, completed, failed
+  meetingUrl   String
+  participants Json      @default("[]")
+  // General-purpose metadata for the meeting. Used for:
+  //   - Bot info (Recall.ai bot configuration, status)
+  //   - Transcript chunks (buffered real-time transcript segments)
+  //   - Recording URL
+  //   - Voice session captured data from live AI participation:
+  //       * requirements: Array of captured requirements (title, description, priority)
+  //       * decisions: Array of decisions made (decision, decidedBy, context)
+  //       * actionItems: Array of action items (task, assignee, deadline)
+  //       * flags: Array of flags (ambiguity, risk, conflict, missing context)
+  //       * openQuestions: Array of unresolved questions
+  metadata     Json      @default("{}")
+  source       String    @default("upload") // 'upload' | 'google_meet' | 'voice_dialin' | 'recall'
+  audioUrl     String? // S3 key for uploaded/recorded audio
+  uploadedBy   String? // userId who uploaded (for Google OAuth per-user)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  transcript Transcript?
+  tasks      AgentTask[]
+  prds       PRD[]
+  tickets    Ticket[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([externalId])
+  @@map("meetings")
+}
+
+model Transcript {
+  id        String   @id @default(cuid())
+  meetingId String   @unique
+  meeting   Meeting  @relation(fields: [meetingId], references: [id])
+  segments  Json     @default("[]") // Array of { speaker, text, startTime, endTime }
+  fullText  String   @db.Text
+  duration  Int // Total duration in seconds
+  wordCount Int
+  speakers  Json     @default("[]") // Array of speaker names
+  createdAt DateTime @default(now())
+
+  @@map("transcripts")
+}
+
+// ============================================================
+// Agent Tasks
+// ============================================================
+
+/// @deprecated Use Ticket instead. N6 (2026-04-20) made Ticket the single
+/// source of truth for every piece of agent work. This table is retained
+/// read-only so historical data remains inspectable; no new paths write to
+/// it from the service layer onward. Every AgentTask row has a
+/// corresponding Ticket via the one-time N6 backfill migration, and every
+/// new TaskRepository.createTask() call also writes a mirror Ticket. A
+/// future migration will drop this model once nothing still reads it.
+model AgentTask {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  meetingId        String?
+  meeting          Meeting?  @relation(fields: [meetingId], references: [id])
+  agentType        String // ba-agent, dev-agent, etc.
+  /// P1: project scope. Nullable for backward compat.
+  projectId        String?
+  project          Project?  @relation(fields: [projectId], references: [id])
+  /// M2: The goal this task advances. Optional — falls back to engagement.goalId
+  /// via AgentTaskService.resolveGoal() when null.
+  goalId           String?
+  goal             Goal?     @relation(fields: [goalId], references: [id])
+  status           String    @default("pending") // pending, processing, awaiting_clarification, awaiting_approval, completed, failed
+  input            Json // Task-specific input data
+  output           Json? // Task-specific output data
+  confidence       Float     @default(0)
+  requiresApproval Boolean   @default(false)
+  approvedBy       String?
+  approvedAt       DateTime?
+  error            String?
+  retryCount       Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
+
+  clarifications ClarificationRequest[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([agentType])
+  @@index([tenantId, status, agentType])
+  @@map("agent_tasks")
+}
+
+// ============================================================
+// PRDs (Product Requirements Documents)
+// ============================================================
+
+model PRD {
+  id                   String   @id @default(cuid())
+  taskId               String
+  meetingId            String
+  meeting              Meeting  @relation(fields: [meetingId], references: [id])
+  tenantId             String
+  tenant               Tenant   @relation(fields: [tenantId], references: [id])
+  /// P1: project scope. Null on legacy rows; backfilled to Default.
+  projectId            String?
+  project              Project? @relation(fields: [projectId], references: [id])
+  title                String
+  summary              String   @db.Text
+  objectives           Json     @default("[]")
+  requirements         Json     @default("[]") // Array of requirement objects
+  acceptanceCriteria   Json     @default("[]")
+  outOfScope           Json     @default("[]")
+  assumptions          Json     @default("[]")
+  risks                Json     @default("[]") // Array of { description, impact, mitigation }
+  architectureOptions  Json     @default("[]") // Array of architecture options
+  selectedArchitecture String? // Name of selected option
+  architectureDesign   Json? // Detailed design from Architect agent (components, APIs, data model)
+  timeline             String?
+  confidence           Float    @default(0)
+  version              Int      @default(1)
+  status               String   @default("draft") // draft, pending_approval, approved, rejected
+  googleDocId          String?  @map("google_doc_id") // Google Docs document ID
+  googleDocUrl         String?  @map("google_doc_url") // Full Google Docs URL
+  targetRepo           String? // Repo slug like "acme/backend" for agent job routing
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  tickets     JiraTicket[]
+  symbolLinks PRDSymbolLink[]
+
+  @@index([tenantId])
+  @@index([meetingId])
+  @@index([status])
+  @@map("prds")
+}
+
+/// PG.8: cross-link between a PRD and a symbol in the project graph.
+/// Generated after brief completion by a single structured LLM call
+/// that asks "which project-graph symbols does this brief reference?"
+/// Gives the audit UI a rich "this requirement came from these code
+/// paths" trail. Inspired by https://github.com/safishamsi/graphify.
+model PRDSymbolLink {
+  id         String   @id @default(cuid())
+  tenantId   String
+  prdId      String
+  prd        PRD      @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  /// Node id from ProjectGraph.graphJson (stable: `<relPath>:<kind>:<name>`).
+  symbolId   String
+  /// Human-readable — what the LLM called out ("TicketService"). Kept
+  /// so a dashboard widget can render labels without joining against
+  /// the full graph JSON.
+  symbolName String
+  /// 0..1 — how confident the linker was that this PRD mentions /
+  /// depends on this symbol.
+  confidence Float    @default(0.5)
+  /// 'auto' (LLM-derived) | 'manual' (user added). All rows start 'auto'.
+  source     String   @default("auto")
+  createdAt  DateTime @default(now())
+
+  @@unique([prdId, symbolId])
+  @@index([tenantId, prdId])
+  @@index([tenantId, symbolId])
+  @@map("prd_symbol_links")
+}
+
+model JiraTicket {
+  id                 String    @id @default(cuid())
+  prdId              String
+  prd                PRD       @relation(fields: [prdId], references: [id])
+  externalKey        String? // Jira ticket key (e.g., PROJ-123)
+  projectKey         String
+  issueType          String // Story, Task, Bug, Epic
+  summary            String
+  description        String    @db.Text
+  priority           String
+  labels             Json      @default("[]")
+  acceptanceCriteria String?   @db.Text
+  storyPoints        Int?
+  status             String    @default("created") // created, synced, failed
+  syncedAt           DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([prdId])
+  @@index([externalKey])
+  @@map("jira_tickets")
+}
+
+// ============================================================
+// Clarification Requests
+// ============================================================
+
+model ClarificationRequest {
+  id          String     @id @default(cuid())
+  /// Legacy FK from the AgentTask era. Kept as a nullable column on the
+  /// existing `clarification_requests` table so historical rows remain
+  /// queryable, but every new row writes ticketId instead.
+  taskId      String?
+  task        AgentTask? @relation(fields: [taskId], references: [id])
+  /// N6b: ClarificationRequest now lives under Ticket. The
+  /// chief_of_staff clarification flow creates these with ticketId set;
+  /// the legacy BAAgentService clarification flow also writes ticketId
+  /// via the mirror Ticket id (tix_legacy_<taskId>).
+  ticketId    String?
+  ticket      Ticket?    @relation(fields: [ticketId], references: [id])
+  question    String     @db.Text
+  context     String     @db.Text
+  options     Json? // Suggested answer options
+  routeTo     String // product_lead, tech_lead, stakeholder
+  urgency     String     @default("medium") // low, medium, high
+  status      String     @default("pending") // pending, answered, expired
+  response    String?    @db.Text
+  respondedBy String?
+  respondedAt DateTime?
+  createdAt   DateTime   @default(now())
+  expiresAt   DateTime
+
+  @@index([taskId])
+  @@index([ticketId])
+  @@index([status])
+  @@index([status, expiresAt])
+  @@map("clarification_requests")
+}
+
+// ============================================================
+// Notifications
+// ============================================================
+
+model Notification {
+  id        String    @id @default(cuid())
+  tenantId  String
+  channel   String // gchat, email, slack
+  type      String // info, success, warning, error
+  title     String
+  message   String    @db.Text
+  metadata  Json?
+  sentAt    DateTime?
+  status    String    @default("pending") // pending, sent, failed
+  createdAt DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("notifications")
+}
+
+// ============================================================
+// Model Registry (AI Consulting Firm)
+// ============================================================
+
+model ModelProvider {
+  id        String        @id @default(cuid())
+  tenantId  String
+  name      String // "anthropic", "google", "openai", "meta", "custom"
+  baseUrl   String? // For custom/self-hosted endpoints
+  apiKeyEnc String? // Encrypted API key (AES-256-GCM)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  models    ModelConfig[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model ModelConfig {
+  id                String        @id @default(cuid())
+  tenantId          String
+  providerId        String
+  modelId           String // "claude-sonnet-4", "gemini-2.0-flash", etc.
+  displayName       String
+  capabilities      Json // ["code", "reasoning", "analysis", "fast"]
+  costInput         Float // Per 1K input tokens
+  costOutput        Float // Per 1K output tokens
+  maxContext        Int
+  supportsTools     Boolean       @default(true)
+  supportsStreaming Boolean       @default(true)
+  residency         Json // ["us", "eu"]
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  provider          ModelProvider @relation(fields: [providerId], references: [id])
+
+  @@unique([tenantId, providerId, modelId])
+  @@index([tenantId])
+}
+
+model AgentConfig {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  agentType           String // "meeting_brain", "ba_agent", "dev_agent", "qa_agent", "supervisor", "memory_optimizer"
+  preset              String   @default("recommended") // "recommended", "budget", "premium", "custom"
+  primaryModelId      String // FK to ModelConfig
+  reviewerModelIds    Json // Array of ModelConfig IDs
+  maxSteps            Int      @default(25)
+  confidenceThreshold Float    @default(0.85)
+  isActive            Boolean  @default(true)
+  systemPrompt        String? // Override default system prompt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([tenantId, agentType])
+  @@index([tenantId])
+}
+
+// ============================================================
+// Project (P1 — project-level isolation).
+//
+// Before P1 every user-visible entity was scoped only to the tenant.
+// Once a tenant accumulated >5 projects in flight the UI lists became
+// noisy and cross-context — an exec looking at "Approvals" saw briefs
+// from four different initiatives jumbled together.
+//
+// A Project is a container inside a tenant. Every meeting, brief,
+// engagement, ticket, and goal belongs to exactly one project. The UI
+// carries an "active project" context via header `X-Project-Id`; every
+// list query honors it. Tenants always have at least one project
+// ("Default" seeded on tenant creation).
+//
+// Tenants can archive projects (soft hide) but deletion is blocked
+// while entities reference them — project archive is the safe soft-
+// delete path.
+// ============================================================
+
+model Project {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  /// Short human-readable name shown in the project switcher.
+  name        String
+  /// URL-safe, unique within a tenant. Used in /project/:slug routes
+  /// and for import/export. Auto-derived from name on create but
+  /// editable once.
+  slug        String
+  description String?  @db.Text
+  /// Hex color for the UI chip (e.g. "#7c3aed"). Optional; UI falls
+  /// back to a palette hash of the slug when null.
+  color       String?
+  /// Soft-delete flag. Archived projects don't show in the switcher
+  /// but their historical data is still reachable via direct URL.
+  isArchived  Boolean  @default(false)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  meetings    Meeting[]
+  engagements Engagement[]
+  prds        PRD[]
+  goals       Goal[]
+  tickets     Ticket[]
+  tasks       AgentTask[]
+  graph       ProjectGraph?
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, isArchived])
+  @@map("projects")
+}
+
+// ============================================================
+// ProjectGraph (inspired by https://github.com/safishamsi/graphify —
+// credited in the README's "Credits" section).
+//
+// A cached AST-derived knowledge graph of a project's code. Agents
+// (chief_of_staff, BA, Dev, QA) query this to find god nodes, callers,
+// shortest paths between symbols, and community clusters — the kind of
+// structural understanding grep can't give you.
+//
+// We build the graph natively in TypeScript (using the TypeScript
+// compiler API for AST extraction + graphology for graph operations),
+// not via a shell-out to graphify. Reasons:
+//   - No Python runtime on the server
+//   - No ToS exposure from graphify's LLM-extraction pass
+//   - Integrates cleanly with our existing BYOK model calls
+//
+// Refresh cadence: rebuilt on explicit POST /api/project-graph/:id/build,
+// on engagement completion, or when SHA256 of the repo tree changes.
+// Nodes + edges serialized as JSON and kept as a single row per project
+// to keep reads single-query and updates atomic.
+// ============================================================
+
+model ProjectGraph {
+  id             String   @id @default(cuid())
+  tenantId       String
+  projectId      String   @unique
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// SHA256 of the set of file contents at build time. Re-runs early-
+  /// exit when this matches the current tree's hash.
+  contentHash    String
+  /// Serialized graph: { nodes: [...], edges: [...], communities: [...] }.
+  /// Stored as Json so Postgres handles size + we can JSONB-query in
+  /// the future for cheap slice reads.
+  graphJson      Json
+  /// Denormalized counts for fast dashboard reads + audit UI badges.
+  nodeCount      Int      @default(0)
+  edgeCount      Int      @default(0)
+  communityCount Int      @default(0)
+  /// Top-N god nodes cached for fast chief_of_staff prompt enrichment
+  /// (reads the whole graphJson would be wasteful when the planner
+  /// only needs the top 5).
+  godNodeSlugs   Json     @default("[]")
+  /// File extensions the extractor covered on this build. Used by the
+  /// audit UI to show "TS/JS only" vs "TS/JS/Python" coverage badges.
+  languages      Json     @default("[]")
+  /// Root path of the repo that produced this graph, for audit. Never
+  /// an absolute path that leaks server layout — stored as the basename
+  /// the caller supplied.
+  repoLabel      String?
+  /// PG.11: absolute path on the server filesystem of the repo that
+  /// produced this graph. Cached on the first manual build so that
+  /// GitHub push webhooks can trigger an automatic rebuild without
+  /// having to re-take a path from the caller. Nullable because the
+  /// server doesn't always have a local checkout (SaaS deploys would
+  /// run builds via a local daemon instead).
+  repoPath       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, projectId])
+  @@index([repoLabel])
+  @@map("project_graphs")
+}
+
+// ============================================================
+// Agent webhook registrations (N4 — cross-language agents).
+//
+// Before N4 agents had to speak WebSocket + our wire protocol,
+// effectively locking the local daemon to Node. This table lets ANY
+// language register an HTTP URL that Workforce0 POSTs to on
+// ticket.ready events. Python, Go, Ruby, a Cloud Run function — as
+// long as it can receive a webhook, it can be an agent.
+//
+// Payload posted to `callbackUrl` on ticket.ready:
+//   {
+//     event: 'ticket.ready',
+//     tenantId, ticketId, roleSlug,
+//     signature: <HMAC-SHA256 of body, base64url, keyed with sharedSecret>
+//   }
+//
+// Agent responds to the webhook, then follows up at its own pace with:
+//   POST /api/tickets/claim    — grabs the ticket
+//   POST /api/tickets/:id/comment  — logs steps
+//   POST /api/tickets/:id/transition — done/failed
+//
+// Webhooks are fire-and-forget from our side; we retry on non-2xx up
+// to 3 times with backoff, then log and move on.
+// ============================================================
+
+model AgentWebhook {
+  id           String    @id @default(cuid())
+  tenantId     String
+  /// Each webhook subscribes to one role. Multi-role agents register
+  /// multiple webhooks (one row each); keeps the query simple.
+  roleSlug     String
+  /// Fully-qualified URL we POST to. HTTPS in prod is not enforced by
+  /// the code (dev uses http://localhost) but the UI warns otherwise.
+  callbackUrl  String
+  /// Shared secret the agent owner picks or we generate. Used to sign
+  /// outbound webhooks so the agent can verify the call is from us.
+  sharedSecret String
+  /// Optional friendly name for the UI ("Python Dev Bot").
+  name         String?
+  /// Lets admins pause a misbehaving integration without deleting.
+  isActive     Boolean   @default(true)
+  /// Last success/failure for the UI. Purely informational.
+  lastFiredAt  DateTime?
+  lastStatus   String? // '200' | '500' | 'timeout' | 'connection_refused'
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId, roleSlug, isActive])
+  @@index([tenantId])
+  @@map("agent_webhooks")
+}
+
+// ============================================================
+// Ticket (M4 — Paperclip-inspired unified work item).
+//
+// Before M4 the orchestrator wired processors together directly:
+//   BA processor completes → queues Dev processor → queues QA processor
+//
+// After M4 work flows through a role-keyed pull queue:
+//   BA ticket moves to stage='ready_for_dev' → any agent registered for
+//   role='dev_agent' heartbeats and claims it → advances its stage.
+//
+// The upside:
+//   - Adding a new role = inserting a row into `agent_roles`; the
+//     orchestrator routes on stage→role without any code change.
+//   - Multiple agents can process the same role in parallel.
+//   - Failed tickets stay claimable; another agent retries.
+//   - Per-role metrics (throughput, success rate, p95 latency) fall
+//     out of the stage history naturally.
+//
+// M4 ships the schema + service + REST surface. AgentTask/AgentJob
+// continue to run in parallel for backward compat — a follow-up commit
+// will migrate the existing BA/Dev/QA processors onto Ticket.
+// ============================================================
+
+model Ticket {
+  id               String    @id @default(cuid())
+  tenantId         String
+  /// P1: project scope. Nullable on legacy rows.
+  projectId        String?
+  project          Project?  @relation(fields: [projectId], references: [id])
+  /// N6: optional meeting link — set when the ticket originated from a
+  /// meeting (BA transcript processing, voice dial-in, Meet upload).
+  /// Nullable because not every ticket comes from a meeting (scheduled
+  /// work, direct API creates, sub-tickets).
+  meetingId        String?
+  meeting          Meeting?  @relation(fields: [meetingId], references: [id])
+  /// Optional FK to the goal this ticket advances. Inherits from parent
+  /// ticket if null; falls back to engagement.goalId via TicketService.
+  goalId           String?
+  /// For sub-tickets / task decomposition. A parent ticket can spawn
+  /// children to farm out sub-work.
+  parentTicketId   String?
+  parent           Ticket?   @relation("TicketTree", fields: [parentTicketId], references: [id])
+  children         Ticket[]  @relation("TicketTree")
+  /// The role slug responsible for the CURRENT stage. Pull queue is
+  /// keyed on (tenantId, roleSlug, status='ready'). Denormalized from
+  /// the stage definition for query efficiency.
+  roleSlug         String
+  /// Human-facing title — typically brief.title or meeting.title.
+  title            String
+  /// What done looks like, inherited from goal.outcome or authored at
+  /// ticket creation.
+  description      String    @db.Text
+  /// Where the ticket is in its flow. Values are role-specific:
+  ///   'ready'      — queued, no agent has claimed
+  ///   'claimed'    — an agent has claimed it; working
+  ///   'waiting'    — paused for external input (approval, clarification)
+  ///   'done'       — successfully completed
+  ///   'failed'     — terminal failure, with error populated
+  ///   'cancelled'  — user-cancelled
+  status           String    @default("ready")
+  /// Agent that claimed this ticket (FK to agent_tokens / hub session).
+  /// Nullable because role-based routing means the assignment is
+  /// runtime, not design-time.
+  claimedByAgent   String?
+  claimedAt        DateTime?
+  /// Structured payload — transcript, PRD body, PR number, etc. Shape
+  /// depends on roleSlug; consumers know their payload shape.
+  payload          Json      @default("{}")
+  /// Result of this stage — written on transition to status='done'.
+  result           Json?
+  error            String?   @db.Text
+  /// Pre-calculated priority for queue ordering. Higher = picked first.
+  priority         Int       @default(100)
+  /// N6: optimism score the agent attached to its result — 0..1.
+  /// Carried over from AgentTask so confidence-gated routing still works.
+  confidence       Float     @default(0)
+  /// N6: when true, status='done' transition is held as 'waiting' until
+  /// an approver acts (approve → done, reject → failed).
+  requiresApproval Boolean   @default(false)
+  /// N6: who approved this ticket. Null until approved.
+  approvedBy       String?
+  approvedAt       DateTime?
+  createdBy        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
+
+  events         TicketEvent[]
+  clarifications ClarificationRequest[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, roleSlug, status])
+  @@index([parentTicketId])
+  @@index([goalId])
+  @@index([meetingId])
+  @@map("tickets")
+}
+
+/// Append-only event log per ticket. Every stage transition + claim +
+/// status change writes a row. Gives us free replay, audit, and
+/// timeline UI without polluting the Ticket row with arrays of history.
+model TicketEvent {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  /// 'created' | 'claimed' | 'status_changed' | 'comment' | 'result_written' | 'failed'
+  kind      String
+  /// Who did this — agent id, user id, or 'system' for automatic transitions.
+  actor     String
+  /// Payload depends on kind — e.g. { from: 'ready', to: 'claimed' } for
+  /// status_changed; { text: '...' } for comment.
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_events")
+}
+
+// ============================================================
+// Pluggable agent roles (M1 — Paperclip-inspired org model).
+//
+// Before: `AgentTask.agentType` was a free string with behavior hardcoded in
+// processor switch statements. Adding a 7th agent meant touching code in
+// ~5 places and shipping a release.
+//
+// After: every agent type is a row here. Built-ins (isBuiltin=true) ship
+// as seed data so existing behavior is identical on day 1. Tenants can
+// layer their own roles on top (e.g. "ops_analyst", "sales_researcher")
+// by inserting new rows — the orchestrator routes on `slug` instead of
+// the old enum.
+//
+// tenantId=NULL → global built-in role (BA, Dev, QA, Architect, Supervisor,
+// Memory-Optimizer). A tenant-scoped row with the same slug wins over the
+// global one, letting tenants override prompts/tools/budgets per org.
+// ============================================================
+
+// ============================================================
+// Goal (M2 — Paperclip-inspired).
+//
+// Every piece of work should know WHY it's happening. Before M2 we
+// carried tenantId + engagementId but never stamped a goal statement —
+// agents read transcripts and inferred intent from text alone. With
+// goals, every agent prompt is prefixed with:
+//
+//   You are working toward: <goal.title>
+//   Outcome: <goal.outcome>
+//
+// That one sentence is the cheapest, highest-leverage quality lever we
+// have over agent output. The goal also threads into Dev daemon
+// payloads so the local claude CLI gets the "why" too.
+//
+// Structure:
+//   - parentGoalId → tree (company goal → project goal → ticket goal).
+//   - Engagement.goalId → the current root goal for that engagement.
+//   - AgentTask.goalId → optional narrower goal for a specific task;
+//     falls back to engagement.goalId when null.
+// ============================================================
+
+model Goal {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  /// P1: project scope. Nullable on legacy rows.
+  projectId    String?
+  project      Project?  @relation(fields: [projectId], references: [id])
+  title        String
+  description  String    @db.Text
+  /// What "done" looks like in plain language. Used verbatim in prompts.
+  outcome      String    @db.Text
+  parentGoalId String?
+  parent       Goal?     @relation("GoalTree", fields: [parentGoalId], references: [id])
+  children     Goal[]    @relation("GoalTree")
+  /// 'active' | 'achieved' | 'abandoned'
+  status       String    @default("active")
+  /// Optional due-by or target date; purely for display, no enforcement.
+  targetDate   DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  engagements Engagement[]
+  agentTasks  AgentTask[]
+
+  @@index([tenantId, status])
+  @@index([parentGoalId])
+  @@map("goals")
+}
+
+// ============================================================
+// Role config version history (M6).
+//
+// Every time an agent_roles row is mutated via the UI/API we write a
+// snapshot here. Gives us two things:
+//
+//   1. Audit: who changed the BA budget from 2M to 100 yesterday at 2am
+//   2. Rollback: one click to restore a prior version
+//
+// Append-only — entries are never updated or deleted. `version` is a
+// monotonic counter per (tenantId, slug), not a global sequence.
+// ============================================================
+
+model AgentRoleVersion {
+  id        String   @id @default(cuid())
+  /// Redundant copy of tenantId so we can enforce tenant isolation
+  /// without a join. Null matches the global built-in row.
+  tenantId  String?
+  slug      String
+  version   Int
+  /// Full role row as JSON at the moment of the change. Rollback
+  /// reconstitutes from this.
+  snapshot  Json
+  /// Free-form note — "bumped BA budget for big demo prep" etc. The
+  /// UI surfaces this in the version list so admins don't need to
+  /// guess what each snapshot was.
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, slug, version])
+  @@index([tenantId, slug, createdAt])
+  @@map("agent_role_versions")
+}
+
+model AgentRole {
+  id                   String   @id @default(cuid())
+  tenantId             String? // NULL for global built-ins; set for tenant-custom roles
+  slug                 String // 'ba_agent', 'dev_agent', 'ops_analyst', etc.
+  displayName          String // 'Business Analyst', 'Developer', ...
+  description          String   @db.Text
+  category             String   @default("consultant") // 'consultant' | 'execution' | 'meta'
+  /// N5: who this role reports to. NULL for top-level roles.
+  /// Self-referential — a role's parent is another role (identified by
+  /// slug for cross-tenant overrides; tenant-scoped rows still resolve
+  /// correctly because `slug` is unique within the effective set).
+  parentRoleSlug       String?
+  /// Role's system-prompt template. Goal / context placeholders rendered at
+  /// call-site. Null → agent keeps its hardcoded prompt (for legacy roles
+  /// that have complex prompt assembly in code).
+  systemPromptTemplate String?  @db.Text
+  /// Tools this role is allowed to call when running via the local daemon
+  /// or a tool-using LLM. Pulled from CLAUDE_ARGS-style allowlists.
+  allowedTools         Json     @default("[]")
+  /// Optional FK to ModelConfig — if set, overrides the tenant's default
+  /// model pick for this role.
+  defaultModelConfigId String?
+  /// Soft budget (M3 hooks this up). Pre-flight check at every LLM call.
+  monthlyBudgetTokens  Int?
+  /// Default BullMQ concurrency cap for jobs of this role's type.
+  defaultConcurrency   Int      @default(2)
+  /// Built-ins can't be deleted from the UI (but their prompts/budgets
+  /// can be overridden by inserting a tenant-scoped row with the same slug).
+  isBuiltin            Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Unique on (tenantId, slug) — nullable tenantId means one global slug
+  // can coexist with one override per tenant.
+  @@unique([tenantId, slug])
+  @@index([tenantId, isActive])
+  @@index([slug])
+  @@map("agent_roles")
+}
+
+// ============================================================
+// Engagements (Lifecycle State Machine)
+// ============================================================
+
+model Engagement {
+  id          String    @id @default(cuid())
+  tenantId    String
+  /// P1: project scope. Null on legacy rows; backfilled to Default.
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id])
+  meetingId   String?
+  /// M2: Root goal for this engagement. Auto-created from meeting.title on
+  /// first ingestion; user can override via the Goals UI.
+  goalId      String?
+  goal        Goal?     @relation(fields: [goalId], references: [id])
+  title       String
+  phase       String    @default("listen") // listen, understand, analyze_ask, approve, build, test, ship, learn
+  status      String    @default("active") // active, paused, completed, failed
+  confidence  Float     @default(0)
+  agentType   String? // Current active agent
+  input       Json? // Phase-specific input
+  output      Json? // Phase-specific output
+  traceId     String    @unique @default(cuid())
+  parentId    String? // For sub-engagements
+  metadata    Json?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, phase])
+  @@index([tenantId, phase, status])
+  @@index([meetingId])
+}
+
+// ============================================================
+// Team Members (Communication Router)
+// ============================================================
+
+model TeamMember {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  email            String
+  role             String // "founder", "cto", "pm", "developer", "designer", "qa"
+  preferredChannel String   @default("email") // "slack", "email", "whatsapp", "teams", "sms"
+  channelIds       Json // { slack: "U123", email: "user@co.com", whatsapp: "+1..." }
+  isActive         Boolean  @default(true)
+  discoveredFrom   String? // "meeting_transcript", "manual", "integration_sync"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantId, email])
+  @@index([tenantId, role])
+}
+
+// ============================================================
+// Message Logs (Communication Router)
+// ============================================================
+
+model MessageLog {
+  id                String    @id @default(cuid())
+  tenantId          String
+  engagementId      String?
+  recipientId       String // TeamMember ID
+  channel           String // "slack", "email", etc.
+  messageType       String // "clarification", "approval_request", "notification", "escalation"
+  content           String
+  metadata          Json?
+  status            String    @default("sent") // "sent", "delivered", "read", "responded", "failed"
+  sentAt            DateTime  @default(now())
+  respondedAt       DateTime?
+  response          String?
+  escalatedAt       DateTime?
+  escalationChannel String?
+
+  @@index([tenantId, engagementId])
+  @@index([recipientId, status])
+}
+
+// ============================================================
+// Meeting Insights (AI-generated summaries)
+// ============================================================
+
+model MeetingInsights {
+  id               String   @id @default(cuid())
+  meetingId        String   @unique
+  tenantId         String
+  summary          String   @db.Text
+  actionItems      Json     @default("[]") // Array of { description, assignee, deadline, priority }
+  decisions        Json     @default("[]") // Array of { description, madeBy, context }
+  sentiment        String? // positive, neutral, concerned
+  participantStats Json     @default("[]") // Array of { speaker, talkTimeSeconds, talkTimePercent }
+  topics           Json     @default("[]") // Array of key topics
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("meeting_insights")
+}
+
+// ============================================================
+// PRD Templates
+// ============================================================
+
+model PRDTemplate {
+  id          String   @id @default(cuid())
+  tenantId    String? // null = system default
+  name        String
+  description String
+  sections    Json // Array of { name, label, required, description }
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("prd_templates")
+}
+
+// ============================================================
+// Tenant Memory (4-Tier Memory System)
+// ============================================================
+
+model TenantMemory {
+  id           String    @id @default(cuid())
+  tenantId     String
+  category     String // "preference", "convention", "pattern", "decision", "feedback"
+  key          String
+  value        Json
+  source       String // "code_review", "prd_rejection", "clarification", "retrospective"
+  confidence   Float     @default(0.5)
+  accessCount  Int       @default(0)
+  lastAccessed DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([tenantId, category, key])
+  @@index([tenantId, category])
+}
+
+// ============================================================
+// Tenant Usage (AI Token & Cost Metering)
+// ============================================================
+
+model TenantUsage {
+  id           String   @id @default(cuid())
+  tenantId     String
+  agentType    String
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUSD      Float
+  jobId        String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, agentType])
+  @@map("tenant_usage")
+}
+
+// ============================================================
+// Audit Log
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  action     String // e.g. "settings.update", "prd.approve", "user.login"
+  resource   String // e.g. "settings", "prd", "meeting"
+  resourceId String?
+  before     Json? // Previous state (for updates)
+  after      Json? // New state (for updates)
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// Outgoing Webhooks
+// ============================================================
+
+model WebhookEndpoint {
+  id          String   @id @default(cuid())
+  tenantId    String
+  url         String // Target URL to POST events to
+  secret      String // HMAC-SHA256 signing secret (auto-generated)
+  events      String[] // Event types to subscribe to, e.g. ["meeting.completed", "prd.generated"]
+  active      Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  endpointId   String
+  event        String // e.g. "meeting.completed"
+  payload      Json // Full event payload sent
+  statusCode   Int? // HTTP response status code (null if connection failed)
+  responseBody String? // First 1KB of response body
+  success      Boolean  @default(false)
+  attempts     Int      @default(1)
+  error        String? // Error message if failed
+  duration     Int? // Response time in ms
+  createdAt    DateTime @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+// ============================================================
+// Learned Skills (AI Learning & Iteration)
+// ============================================================
+
+model LearnedSkill {
+  id             String   @id @default(cuid())
+  name           String
+  content        String   @db.Text
+  target         String // all, ba, dev, qa, meeting_brain, supervisor
+  confidence     Float    @default(0.3)
+  sourceOutcomes Int      @default(0)
+  positiveRate   Float?
+  negativeRate   Float?
+  status         String   @default("candidate") // candidate, active, demoted
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, target])
+  @@index([status])
+  @@map("learned_skills")
+}
+
+// ============================================================
+// Agent Outcomes (Learning from Task Results)
+// ============================================================
+
+model AgentOutcome {
+  id               String   @id @default(cuid())
+  agentType        String
+  taskId           String
+  result           String // approved, revised, rejected
+  confidenceScore  Float
+  toolsUsed        Json? // Array of tool names in order
+  stepCount        Int?
+  revisionFeedback String?  @db.Text
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  @@index([agentType, result])
+  @@index([createdAt])
+  @@map("agent_outcomes")
+}
+
+// ============================================================
+// Agent Tokens (WebSocket Agent Hub)
+// ============================================================
+
+model AgentToken {
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  name       String
+  tokenHash  String    @unique
+  tokenHint  String
+  createdBy  String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([tokenHash])
+  @@index([tenantId])
+  @@map("agent_tokens")
+}
+
+model AgentJob {
+  id           String    @id @default(cuid())
+  tenantId     String
+  agentId      String?
+  action       String
+  status       String    @default("pending")
+  targetRepo   String
+  payload      Json
+  result       Json?
+  error        String?
+  dispatchedAt DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@index([agentId, status])
+  @@map("agent_jobs")
+}
+
+// ============================================================================
+// Tier 3b — Multi-agent conversation layer
+// ============================================================================
+//
+// ConversationThread is one addressable "place" where humans and agents
+// talk together — a Slack channel, a WhatsApp DM, a Telegram group. Every
+// inbound and outbound message lands as a ConversationTurn. Together, the
+// two tables give agents durable memory across turns and let the
+// orchestrator enforce guardrails (runaway-loop detection, rate limit,
+// per-tenant budget).
+//
+// See docs/plans/tier-3-autonomous-multi-agent-chat.md for the full design.
+// ============================================================================
+
+model ConversationThread {
+  id             String    @id @default(cuid())
+  tenantId       String
+  channel        String // "slack" | "whatsapp" | "sms" | "telegram" | "teams"
+  channelRef     String // Slack channel id, WhatsApp phone number, etc.
+  purpose        String // "engagement:<prdId>" | "oncall" | "general"
+  engagementId   String?
+  participants   Json      @default("[]") // [{ kind, id, handle }]
+  createdAt      DateTime  @default(now())
+  lastActivityAt DateTime?
+
+  turns ConversationTurn[]
+
+  @@unique([channel, channelRef, purpose])
+  @@index([tenantId, purpose])
+  @@index([tenantId, lastActivityAt])
+  @@map("conversation_threads")
+}
+
+model ConversationTurn {
+  id          String             @id @default(cuid())
+  threadId    String
+  thread      ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  speaker     String // "agent:ba" | "agent:dev" | "human:<userId>" | "external:<phone>"
+  text        String             @db.Text
+  kind        String // "speak" | "handoff" | "question" | "decision"
+  addressedTo String?
+  createdAt   DateTime           @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([speaker, createdAt])
+  @@map("conversation_turns")
+}
+
+// ============================================================
+// M7 — Skills & Subagents library + chief-of-staff orchestration.
+//
+// Two kinds of reusable agent building blocks, both vendored in
+// vendor/skills/ (anthropics/skills) and vendor/subagents/
+// (VoltAgent/awesome-claude-code-subagents). LibraryService reads
+// the vendor tree on boot and upserts these rows; at runtime the
+// chief_of_staff planner queries them when deciding how to
+// decompose a ticket.
+//
+// Both tables are keyed on (tenantId, slug). tenantId=NULL holds
+// the global library rows seeded from vendor/. A tenant-scoped row
+// with the same slug overrides the global one (same pattern as
+// AgentRole / PRDTemplate).
+// ============================================================
+
+model SkillPackage {
+  id            String   @id @default(cuid())
+  tenantId      String?
+  /// Slug comes from SKILL.md frontmatter `name`, unique per tenant.
+  slug          String
+  source        String   @default("vendor") // 'vendor' | 'user' | 'community'
+  /// Monotonic content hash (sha256 of SKILL.md body) — LibraryService
+  /// uses this to skip upserts when nothing has changed.
+  contentHash   String
+  /// Human-readable one-liner from the frontmatter.
+  description   String   @db.Text
+  /// Full skill body (what gets injected into agent prompts when this
+  /// skill is active). Markdown, rendered as-is.
+  body          String   @db.Text
+  /// Tools the skill assumes are available. Planner filters skills
+  /// whose required tools aren't in the current agent's toolset.
+  requiredTools Json     @default("[]")
+  /// 'active' | 'pending_approval' | 'disabled'. Vendor seeds land
+  /// as 'active'; user/community imports default to 'pending_approval'
+  /// until an admin approves via the Slack/WhatsApp channel reply.
+  status        String   @default("active")
+  /// Free-form metadata — source path, upstream version tag, etc.
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@map("skill_packages")
+}
+
+model SubagentDefinition {
+  id             String   @id @default(cuid())
+  tenantId       String?
+  /// Slug from frontmatter `name` — e.g. "code-reviewer", "api-designer".
+  slug           String
+  source         String   @default("vendor") // 'vendor' | 'user' | 'community'
+  contentHash    String
+  /// One-sentence description from frontmatter.
+  description    String   @db.Text
+  /// System prompt body — the subagent's personality + playbook.
+  systemPrompt   String   @db.Text
+  /// Tool allowlist from frontmatter `tools: Read, Write, Bash, ...`.
+  allowedTools   Json     @default("[]")
+  /// Preferred model from frontmatter `model: sonnet`. Optional —
+  /// ModelRegistryService picks a fallback when null/unavailable.
+  preferredModel String?
+  /// Category — e.g. "01-core-development", used for UI grouping.
+  category       String?
+  /// Same approval gate as SkillPackage. Vendor seeds land 'active'.
+  status         String   @default("active")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([category])
+  @@map("subagent_definitions")
+}
+
+/// A concrete execution plan emitted by the chief_of_staff role for
+/// a parent ticket. Persisted so the audit UI (M7.3) and the replan
+/// logic can walk the plan tree, and so we can compare "plan
+/// attempted" vs "what actually happened".
+///
+/// A plan is a JSON array of steps; each step becomes a child ticket
+/// with payload.skills[] + payload.subagentSlug set. We don't model
+/// the steps as separate rows because they ARE the child tickets
+/// already — this table is just the planner's working memory +
+/// replan history.
+model ExecutionPlan {
+  id               String   @id @default(cuid())
+  tenantId         String
+  /// The parent ticket that chief_of_staff is planning for.
+  parentTicketId   String
+  /// 1-based attempt counter; replans increment this. Cap = 3
+  /// (initial + 2 replans).
+  attempt          Int      @default(1)
+  /// Model used for this plan — useful when debugging cost or quality.
+  model            String?
+  /// Ordered array of steps: [{ title, description, roleSlug,
+  /// subagentSlug?, skills: [], dependsOn: [] }, ...].
+  steps            Json
+  /// Natural-language summary the chief_of_staff posts to the comms
+  /// channel. Stored so the audit UI can show the exact message
+  /// that went out.
+  channelSummary   String   @db.Text
+  /// 'active' | 'superseded' | 'failed' | 'done'. Earlier attempts
+  /// move to 'superseded' when a replan lands.
+  status           String   @default("active")
+  /// If this plan was a replan, the reason supplied by whatever
+  /// caller triggered it (a failed child ticket, a same-error
+  /// signature, etc).
+  replanReason     String?
+  /// M8.3: verified-decomposition metrics. Let the audit UI surface
+  /// plan quality so users can tell a carefully-reviewed plan from a
+  /// fallback one.
+  /// Total critique score 0..25 (null when no critique ran — e.g.
+  /// fallback plans, tests with selfConsistencyN=1 and no critique).
+  critiqueScore    Int?
+  /// True when the critic's score was below threshold and the planner
+  /// ran a revision round. False = plan accepted on first pass.
+  revised          Boolean  @default(false)
+  /// How many parallel candidates self-consistency evaluated before
+  /// picking a winner. 1 = no self-consistency (fallback or
+  /// tenant-opted-out); default is 3.
+  candidateCount   Int      @default(1)
+  /// PG.13: snapshot of the ProjectGraph.contentHash that fed this
+  /// plan's prompt (via the god-nodes landmarks). Null when no graph
+  /// was built at plan time, or when the planner ran without pulling
+  /// code context. Read by the audit UI to badge plans built against
+  /// a stale graph — when this hash doesn't match the current
+  /// ProjectGraph.contentHash for the ticket's project, the codebase
+  /// has changed under the plan and the child tickets may be
+  /// targeting renamed/removed landmarks.
+  graphContentHash String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId, parentTicketId, attempt])
+  @@map("execution_plans")
+}

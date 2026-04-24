@@ -1,0 +1,126 @@
+---
+title: Workforce0 Docs
+description: Self-hosted, open-source AI workforce. BYOK. Meetings in, shipped work out.
+template: splash
+hero:
+  tagline: An AI workforce that runs on your infrastructure.
+  image:
+    file: ../../assets/logo-dark.svg
+  actions:
+    - text: Quickstart (5 min)
+      link: /getting-started/quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: Star on GitHub
+      link: https://github.com/workforce0/workforce0
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+## What is Workforce0?
+
+Workforce0 is an **open-source, self-hosted AI workforce**. A multi-model
+"AI Council" (Claude + GPT + Gemini, any optional, BYOK) turns meetings
+into briefs, briefs into tickets, and tickets into shipped work —
+orchestrated for a non-technical executive who lives in Slack /
+WhatsApp / Teams, not in the web UI.
+
+You install it. Your team uses it. It never phones home.
+
+<CardGrid>
+  <Card title="Two audiences, one product" icon="seti:rescript">
+    One technical operator installs it (Docker, env vars, BYOK). Everyone
+    else (execs, PMs, operators) lives in their comms channel — approvals,
+    redirects, and updates all happen by replying to a message.
+  </Card>
+  <Card title="BYOK, no markup" icon="seti:default">
+    Bring your own API keys for Anthropic, OpenAI, Google, or any
+    OpenAI-compatible local model (Ollama, llama.cpp, vLLM, LM Studio).
+    You pay the providers directly. No resold tokens.
+  </Card>
+  <Card title="Audit-friendly by construction" icon="approve-check">
+    Every decision is logged, every approval is attributed, every AI call
+    is receipted. Row-level-security middleware enforces tenant and
+    project scopes on every read.
+  </Card>
+  <Card title="Comms-first UX" icon="discord">
+    The chief-of-staff agent posts to Slack / Teams / WhatsApp / Google
+    Chat. Approvals happen inline. The web UI is for audit, not daily
+    work — most users never open it.
+  </Card>
+</CardGrid>
+
+## Start here
+
+<CardGrid>
+  <LinkCard
+    title="Quickstart (5 min)"
+    description="Clone the repo, bring the stack up with Docker Compose, and approve your first brief in Slack."
+    href="/getting-started/quickstart/"
+  />
+  <LinkCard
+    title="Installation"
+    description="Detailed self-hosting guide: Docker, Kubernetes, Railway, Fly, Render, DigitalOcean."
+    href="/getting-started/installation/"
+  />
+  <LinkCard
+    title="BYOK"
+    description="Bring your own API keys — Anthropic, OpenAI, Google, or local models via Ollama."
+    href="/byok/overview/"
+  />
+  <LinkCard
+    title="Architecture"
+    description="How the backend, agent daemon, AI Council, and project graph fit together."
+    href="/architecture/overview/"
+  />
+</CardGrid>
+
+## Split audience: who are these docs for?
+
+Workforce0 speaks to two people; these docs mirror that split.
+
+### The installer (you, probably)
+
+You're reading this because you're going to run `docker compose up` and
+hand the working system to your team. Every page under **Getting started**,
+**Self-hosting**, **BYOK**, **Integrations**, **Technical architecture**,
+and **API reference** is for you. We assume familiarity with Docker,
+environment variables, and HTTP APIs.
+
+### The exec consumer
+
+The exec — the VP, CPO, operator the product actually serves — should
+never need to read these docs. They experience Workforce0 through their
+comms channel (Slack, WhatsApp, Teams). A couple of pages in
+**Usage** ("Approvals in Slack", "Daily workflow") are written for them;
+the rest is for you, the installer.
+
+The docs never blur these two personas. When you see copy aimed at the
+installer, it uses command examples. When copy is aimed at the exec,
+it shows a Slack message thread. If you're ever unsure which audience a
+page is for, check the first line — it says so.
+
+## Project structure
+
+```
+workforce0/
+├── backend/         Fastify + TypeScript + Prisma + PostgreSQL
+├── frontend/        Next.js 16 + React 19 (audit UI)
+├── agent/           Local user-side daemon (code-gen via CLI subscription)
+├── docs/            Source Markdown (these docs pull from here)
+└── docs-site/       Starlight build (this site)
+```
+
+## Contributing
+
+Workforce0 is MIT-licensed. Bug reports, integrations, and language
+extractors for the Project Graph are the highest-leverage PRs right now —
+see **Contributing** in the sidebar.
+
+## Release notes
+
+Release notes live on GitHub for now:
+[github.com/workforce0/workforce0/releases](https://github.com/workforce0/workforce0/releases).
+Once the docs site is deployed publicly we'll surface them here too.
