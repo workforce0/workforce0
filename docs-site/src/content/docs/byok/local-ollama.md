@@ -37,28 +37,45 @@ AI_CUSTOM_MODELS=llama3.1:70b,qwen2.5-coder:14b,mistral-small:22b
 The backend auto-registers a provider entry named `custom`. In
 **Settings → AI providers** it shows as "Custom (local)".
 
+## Per-role routing guide
+
+Not every role is equal — some need frontier quality, others are
+narrow specialists that run happily on local models. Use this as
+the default split:
+
+| Role                     | Needs frontier?                 | Good local option |
+| ------------------------ | ------------------------------- | ------------------ |
+| `chief_of_staff` (planner) | ✅ Yes — open-ended decomposition | Not recommended; degrades sharply on ambiguous inputs |
+| `ba_agent` (brief generator) | ⚠️ Strong preference           | 70B+ local models are acceptable for structured transcripts |
+| `dev_agent`              | ❌ Scoped specialist            | Qwen 2.5 Coder, DeepSeek Coder via Ollama |
+| `qa_agent`               | ❌ Scoped specialist            | Same as `dev_agent` |
+| `memory_optimizer`       | ❌ Summarization                | Any 8B+ local model |
+
+**Keep the planner on a frontier provider.** Local 7B / 13B models
+produce plans that the critique step rejects — you burn tokens
+retrying without quality gain. Every other role tolerates local
+substitution reasonably well.
+
 ## Routing roles to local
 
 By default, specialists keep using whichever BYOK provider you set.
 To route them local, set:
 
 ```bash
-MODEL_BA_CUSTOM=llama3.1:70b
-MODEL_ARCHITECT_CUSTOM=llama3.1:70b
+# Scoped specialists — local works well
+MODEL_DEV_CUSTOM=qwen2.5-coder:14b
 MODEL_QA_CUSTOM=qwen2.5-coder:14b
-# Planner stays on a frontier provider for quality
+MODEL_MEMORY_CUSTOM=llama3.1:8b
+
+# BA agent — OK on 70B+ local for structured transcripts
+MODEL_BA_CUSTOM=llama3.1:70b
+
+# Planner stays on a frontier provider — don't route local
 MODEL_PLANNER_ANTHROPIC=claude-sonnet-4-6
 ```
 
 Specialists route to `custom` if it's set; otherwise they fall back
 to the other providers in priority order.
-
-## What NOT to route local
-
-The **planner** (chief-of-staff) is best on a frontier model. Local
-7B / 13B models produce plans but miss structural nuance. The plans
-get rejected by the critique step and waste tokens retrying. Keep a
-frontier model for the planner.
 
 ## Recommended local models
 
