@@ -265,7 +265,7 @@ function Hero({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
               aria-hidden
               className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-accent via-violet-500 to-sky-500 opacity-30 blur-lg group-hover:opacity-50 transition-opacity"
             />
-            <figure className="relative rounded-xl bg-ink border border-ink-secondary/30 shadow-[var(--shadow-float)] overflow-hidden text-left">
+            <figure className="relative rounded-xl bg-[#0a0a0c] border border-white/10 shadow-[var(--shadow-float)] overflow-hidden text-left">
               <figcaption className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose/70" aria-hidden />
@@ -473,7 +473,7 @@ function AudienceSplit() {
             title="Install once, hand it off."
             body="You're comfortable with Docker, API keys, and env vars. You spin up the stack, paste BYOK keys, wire Jira / Slack / Google once. After that, the product runs itself."
             points={[
-              "Docker Compose, Kubernetes, Railway, Fly — pick your path",
+              "Docker Compose, Railway, Render, Fly, DigitalOcean — pick your path",
               "BYOK for Anthropic / OpenAI / Google, or local Ollama",
               "Logs where you already look. No mystery boxes.",
             ]}
@@ -484,7 +484,7 @@ function AudienceSplit() {
             title="Live in Slack, ship in Jira."
             body="Execs, PMs, operators. They get brief summaries in their comms channel, approve with a reply, and move on. The web UI is audit-only — they rarely open it."
             points={[
-              "Slack / Teams / WhatsApp — choose the room they already live in",
+              "Slack / Google Chat / WhatsApp — choose the room they already live in",
               "Approve or redirect with a reply, never a form",
               "Decisions are logged, nothing is lost in DMs",
             ]}
@@ -635,13 +635,13 @@ function FeatureCard({
 function IntegrationsRow() {
   const integrations = [
     { name: "Slack", icon: <Slack className="w-5 h-5" aria-hidden /> },
-    { name: "WhatsApp", icon: <MessageSquare className="w-5 h-5" aria-hidden /> },
-    { name: "Teams", icon: <Users className="w-5 h-5" aria-hidden /> },
+    { name: "Google Chat", icon: <MessageSquare className="w-5 h-5" aria-hidden /> },
+    { name: "WhatsApp", icon: <Phone className="w-5 h-5" aria-hidden /> },
     { name: "Jira", icon: <Briefcase className="w-5 h-5" aria-hidden /> },
     { name: "GitHub", icon: <Github className="w-5 h-5" aria-hidden /> },
     { name: "Google Drive", icon: <FileText className="w-5 h-5" aria-hidden /> },
-    { name: "Twilio voice", icon: <Phone className="w-5 h-5" aria-hidden /> },
-    { name: "Google Meet", icon: <Video className="w-5 h-5" aria-hidden /> },
+    { name: "Twilio voice", icon: <Video className="w-5 h-5" aria-hidden /> },
+    { name: "Email reply", icon: <Users className="w-5 h-5" aria-hidden /> },
   ];
   return (
     <section className="relative py-16 sm:py-20 border-y border-border bg-surface-muted/40">
@@ -797,11 +797,10 @@ function FinalCTA() {
   return (
     <section id="install" className="relative py-24 sm:py-32">
       <div className="max-w-4xl mx-auto px-5 lg:px-8">
-        <div className="relative rounded-3xl bg-gradient-to-br from-ink via-[#0e0e10] to-ink-secondary text-ink-inverse p-10 sm:p-14 overflow-hidden shadow-[var(--shadow-float)]">
-          {/* Glow blobs */}
-          <div aria-hidden className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-accent/30 blur-3xl" />
-          <div aria-hidden className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-violet-500/25 blur-3xl" />
-          <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(79,70,229,0.25),_transparent_50%)]" />
+        <div className="relative rounded-3xl bg-gradient-to-br from-[#0a0a0c] via-[#0e0e10] to-[#15151a] text-white p-10 sm:p-14 overflow-hidden shadow-[var(--shadow-float)]">
+          {/* Glow blobs (kept subtle so CTAs stay readable) */}
+          <div aria-hidden className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-accent/15 blur-3xl" />
+          <div aria-hidden className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-violet-500/10 blur-3xl" />
 
           <div className="relative text-center">
             <div className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/10 border border-white/15 text-[11.5px] font-medium">
@@ -820,7 +819,7 @@ function FinalCTA() {
                 href={GITHUB_REPO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 h-12 px-6 rounded-xl bg-white text-ink text-[14.5px] font-semibold hover:bg-white/90 transition-colors"
+                className="inline-flex items-center gap-2 h-12 px-6 rounded-xl bg-white text-[#0a0a0c] text-[14.5px] font-semibold hover:bg-white/90 transition-colors"
               >
                 <Github className="w-4 h-4" aria-hidden />
                 Clone on GitHub
