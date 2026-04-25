@@ -294,8 +294,17 @@ describe('Agent Dispatch Chain — Integration', () => {
     // 6b. OutcomeObserver.recordFromTask called with 'task-1'
     expect(mockOutcomeObserver.recordFromTask).toHaveBeenCalledWith('task-1');
 
-    // 6c. EngagementService.advancePhase called with ('meeting-test', 'test')
-    expect(mockEngagementService.advancePhase).toHaveBeenCalledWith('meeting-test', 'test');
+    // 6c. EngagementService.advancePhase called with the proper
+    // (tenantId, engagementId, input) signature. The previous expectation
+    // here was ('meeting-test', 'test') — that asserted the broken
+    // 2-arg call site that produced the prisma:error in result-bridging
+    // (see commit abde7db). The bridge now reads the real engagementId
+    // from the AgentJob payload.
+    expect(mockEngagementService.advancePhase).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.any(String),
+      expect.objectContaining({ targetPhase: 'test' }),
+    );
 
     // 6d. A new AgentJob created with action 'review_pr' (the QA chain)
     const enqueueCalls = mockPrisma.agentJob.create.mock.calls;
