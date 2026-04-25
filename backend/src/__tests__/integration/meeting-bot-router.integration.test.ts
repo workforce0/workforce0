@@ -25,7 +25,14 @@ function fakeProvider(id: ProviderId, available: boolean, scheduleResult?: { bot
   };
 }
 
-function buildApp(router: MeetingBotRouter, meetingService: { createScheduled: ReturnType<typeof vi.fn>; markFailed: ReturnType<typeof vi.fn> }): FastifyInstance {
+type CreateScheduledFn = (input: { tenantId: string; title: string; meetingUrl: string }) => Promise<{ id: string }>;
+type MarkFailedFn = (meetingId: string, reason: string) => Promise<void>;
+type MeetingServiceMock = {
+  createScheduled: ReturnType<typeof vi.fn<CreateScheduledFn>>;
+  markFailed: ReturnType<typeof vi.fn<MarkFailedFn>>;
+};
+
+function buildApp(router: MeetingBotRouter, meetingService: MeetingServiceMock): FastifyInstance {
   const app = Fastify();
   (app as unknown as { services: Record<string, unknown> }).services = { meetingBotRouter: router, meetingService };
   app.addHook('preHandler', (req, _reply, done) => {
@@ -52,11 +59,11 @@ function buildApp(router: MeetingBotRouter, meetingService: { createScheduled: R
 }
 
 describe('integration: POST /api/meetings via MeetingBotRouter', () => {
-  let meetingService: { createScheduled: ReturnType<typeof vi.fn>; markFailed: ReturnType<typeof vi.fn> };
+  let meetingService: MeetingServiceMock;
   beforeEach(() => {
     meetingService = {
-      createScheduled: vi.fn().mockResolvedValue({ id: 'm-1' }),
-      markFailed: vi.fn().mockResolvedValue(undefined),
+      createScheduled: vi.fn<CreateScheduledFn>().mockResolvedValue({ id: 'm-1' }),
+      markFailed: vi.fn<MarkFailedFn>().mockResolvedValue(undefined),
     };
   });
 
