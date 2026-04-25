@@ -45,7 +45,7 @@ Every step has a human approval gate. **Pull requests are drafts your team revie
 
 ```
 ┌─────────────┐     ┌──────────┐     ┌──────────────┐     ┌────────────┐     ┌──────────────┐     ┌─────────┐
-│   Meeting   │────▶│    AI    │────▶│    Human     │────▶│ Jira/Linear│────▶│ Local agent  │────▶│   PR    │
+│   Meeting   │───▶│    AI   │────▶│    Human     │───▶│ Jira/Linear│────▶│ Local agent  │────▶│   PR    │
 │             │     │  brief   │     │   approval   │     │   ticket   │     │  (BYO CLI)   │     │         │
 │ upload/meet │     │  ~20 s   │     │              │     │            │     │              │     │         │
 │ /phone/vtt  │     │          │     │              │     │            │     │              │     │         │
