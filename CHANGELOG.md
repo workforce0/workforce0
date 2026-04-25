@@ -5,6 +5,34 @@ All notable changes to Workforce0 are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.0 (2026-04-25)
+
+
+### Features
+
+* end-to-end WhatsApp approval loop + brand rollout + OOTB pipeline fixes ([#31](https://github.com/workforce0/workforce0/issues/31)) ([d874d71](https://github.com/workforce0/workforce0/commit/d874d71438f49da18f1a95de798e3244b81aef92))
+* initial public release ([5897aa5](https://github.com/workforce0/workforce0/commit/5897aa520c52f393c0c4da77f334a7d441ffe81b))
+* **landing:** bolder hero + integration row + acknowledgements ([58d8b90](https://github.com/workforce0/workforce0/commit/58d8b90616b125b7648c34d26854d2f3a527bae7))
+* **landing:** hosted-mode static-export deploy to Cloudflare Pages ([7d9c799](https://github.com/workforce0/workforce0/commit/7d9c799b83c2422b0d2f53f35e3f2e4432e57c2f))
+* Step 0 — local-everything bundle (Ollama + Whisper + provider abstractions) ([#38](https://github.com/workforce0/workforce0/issues/38)) ([6dbca0e](https://github.com/workforce0/workforce0/commit/6dbca0ed838a83c6a79107a981aa8fa786005874))
+
+
+### Bug Fixes
+
+* **landing:** contrast + honest integration claims ([cb4ce35](https://github.com/workforce0/workforce0/commit/cb4ce35d697f4c2f50e5f22b011c027c07ade990))
+* **landing:** scrub all overclaims from gap analysis ([48bc3b8](https://github.com/workforce0/workforce0/commit/48bc3b85cfabf6f5880304e727cd77cc9a6a00ce))
+
+
+### Documentation
+
+* per-role local-model routing guide (byok/local-ollama) ([f32ad85](https://github.com/workforce0/workforce0/commit/f32ad855aae709ac546c69e5db065c6f6d7c6540))
+* workforce0.dev → workforce0.com (domain swap) ([62a28e6](https://github.com/workforce0/workforce0/commit/62a28e6204b600dac79f18a4bd890ea89d1e1ea2))
+
+
+### Code Refactoring
+
+* **backend:** zod 4 forward-compat fixes ([705ca8c](https://github.com/workforce0/workforce0/commit/705ca8c54fb553320c89720c061d51e51dd4c602))
+
 ## [Unreleased] — feat/oss-pivot branch
 
 ### Changed
