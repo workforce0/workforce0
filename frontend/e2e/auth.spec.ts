@@ -4,15 +4,18 @@ test.describe('Authentication', () => {
   test.describe('Login Page', () => {
     test('should display login form', async ({ page }) => {
       await page.goto('/login');
-      await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible();
-      await expect(page.getByPlaceholder(/email/i)).toBeVisible();
-      await expect(page.getByPlaceholder(/password/i)).toBeVisible();
-      await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /welcome back|sign in/i }),
+      ).toBeVisible();
+      await expect(page.getByLabel(/email/i)).toBeVisible();
+      await expect(page.getByLabel(/password/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign In', exact: true })).toBeVisible();
     });
 
     test('should show Workforce0 branding', async ({ page }) => {
       await page.goto('/login');
-      await expect(page.getByText('Workforce0')).toBeVisible();
+      // Brand mark renders in both desktop split-pane and mobile header — match the first.
+      await expect(page.getByText('Workforce0').first()).toBeVisible();
     });
 
     test('should have link to signup page', async ({ page }) => {
@@ -23,9 +26,9 @@ test.describe('Authentication', () => {
 
     test('should show error on invalid credentials', async ({ page }) => {
       await page.goto('/login');
-      await page.getByPlaceholder(/email/i).fill('bad@email.com');
-      await page.getByPlaceholder(/password/i).fill('wrongpassword');
-      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.getByLabel(/email/i).fill('bad@email.com');
+      await page.getByLabel(/password/i).fill('wrongpassword');
+      await page.getByRole('button', { name: 'Sign In', exact: true }).click();
 
       // Should show some error (exact message depends on backend being up)
       // Wait for either an error message or the loading to finish
@@ -38,10 +41,9 @@ test.describe('Authentication', () => {
 
     test('should prevent form submission with empty fields', async ({ page }) => {
       await page.goto('/login');
-      const emailInput = page.getByPlaceholder(/email/i);
 
       // Try submitting empty form — HTML5 validation should prevent it
-      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.getByRole('button', { name: 'Sign In', exact: true }).click();
 
       // Should still be on login page
       expect(page.url()).toContain('/login');
@@ -52,8 +54,8 @@ test.describe('Authentication', () => {
     test('should display signup form', async ({ page }) => {
       await page.goto('/signup');
       await expect(page.getByRole('heading', { name: /create.*account|sign up|get started/i })).toBeVisible();
-      await expect(page.getByPlaceholder(/email/i)).toBeVisible();
-      await expect(page.getByPlaceholder(/password/i)).toBeVisible();
+      await expect(page.getByLabel(/email/i)).toBeVisible();
+      await expect(page.getByLabel(/password/i)).toBeVisible();
     });
 
     test('should have link to login page', async ({ page }) => {
@@ -64,9 +66,8 @@ test.describe('Authentication', () => {
 
     test('should include name and organization fields', async ({ page }) => {
       await page.goto('/signup');
-      // Look for name-related inputs (may be labeled "Name", "Full name", etc.)
-      const nameInput = page.getByPlaceholder(/name/i).first();
-      await expect(nameInput).toBeVisible();
+      // Signup has both "Your name" and "Organization name" labels — verify the personal name label.
+      await expect(page.getByLabel(/your name/i)).toBeVisible();
     });
   });
 });
