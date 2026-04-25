@@ -40,6 +40,7 @@ export class LocalWhisperProvider implements STTProvider {
     form.append('model', 'whisper-1');                  // faster-whisper-server's default
     form.append('response_format', 'verbose_json');
     if (input.language) form.append('language', input.language);
+    if (input.domainPrompt) form.append('prompt', input.domainPrompt);
 
     // We don't know the audio duration in advance; use a generous fixed timeout.
     // 5 minutes covers most meeting recordings on CPU; GPU is much faster.

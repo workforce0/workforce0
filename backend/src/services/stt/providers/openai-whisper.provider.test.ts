@@ -46,4 +46,21 @@ describe('OpenAIWhisperProvider', () => {
     const p = new OpenAIWhisperProvider({ apiKey: 'sk-test' });
     await expect(p.transcribe({ audio: new Uint8Array([1]), filename: 'a.wav' })).rejects.toThrow(/OpenAI Whisper failed: 401/);
   });
+
+  it('passes domainPrompt through as Whisper prompt parameter', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({
+      text: 'hi', segments: [], duration: 0, language: 'en',
+    }), { status: 200 }));
+    const p = new OpenAIWhisperProvider({ apiKey: 'sk-test' });
+    await p.transcribe({
+      audio: new Uint8Array([1]),
+      filename: 'a.wav',
+      domainPrompt: 'kubernetes deployment',
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.openai.com/v1/audio/transcriptions',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
 });

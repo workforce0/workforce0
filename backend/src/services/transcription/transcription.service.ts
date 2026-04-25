@@ -310,10 +310,9 @@ export class TranscriptionService {
    * to the legacy direct OpenAI Whisper call so existing installs that
    * never set up the router keep working.
    *
-   * The `domainPrompt` is only forwarded when calling OpenAI directly —
-   * the router's `TranscribeInput` shape doesn't carry it yet (intentional,
-   * Plan 2 keeps the router shape minimal). Domain-prompt support across
-   * providers can be added in a follow-up without changing this contract.
+   * The `domainPrompt` is forwarded through both paths — the router's
+   * `TranscribeInput` accepts it, and individual providers append it
+   * to the multipart form as Whisper's `prompt` parameter.
    */
   private async transcribeChunkSingleShot(
     chunkBuffer: Buffer,
@@ -325,6 +324,9 @@ export class TranscriptionService {
       const result = await this.sttRouter.transcribe({
         audio: new Uint8Array(chunkBuffer),
         filename,
+        domainPrompt: domainPrompt && domainPrompt.trim()
+          ? domainPrompt.slice(0, 1000)
+          : undefined,
       });
       return {
         text: result.text,

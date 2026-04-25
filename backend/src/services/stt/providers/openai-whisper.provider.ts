@@ -36,6 +36,7 @@ export class OpenAIWhisperProvider implements STTProvider {
     form.append('model', 'whisper-1');
     form.append('response_format', 'verbose_json');
     if (input.language) form.append('language', input.language);
+    if (input.domainPrompt) form.append('prompt', input.domainPrompt);
 
     const res = await fetch(OPENAI_WHISPER_URL, {
       method: 'POST',

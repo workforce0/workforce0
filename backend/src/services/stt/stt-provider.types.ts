@@ -14,6 +14,14 @@ export interface TranscribeInput {
   filename: string;
   /** ISO 639-1 language hint (omit for autodetect). */
   language?: string;
+  /**
+   * Whisper "prompt" parameter — domain vocabulary hints. The OpenAI
+   * Whisper API and faster-whisper-server both accept a free-form text
+   * prompt that biases the model toward the supplied terminology. Used
+   * for product names, acronyms, and other words the base model
+   * mistranscribes.
+   */
+  domainPrompt?: string;
 }
 
 export interface TranscribeResult {
