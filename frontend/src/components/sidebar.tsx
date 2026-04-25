@@ -25,6 +25,7 @@ import {
   BookOpen,
   FolderKanban,
   Network,
+  HeartPulse,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { logout } from "@/lib/auth";
@@ -48,6 +49,7 @@ const navigation = [
   { name: "Analytics", href: "/analytics", icon: TrendingUp },
   { name: "Team", href: "/team", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "System Status", href: "/settings/system-status", icon: HeartPulse },
 ];
 
 interface SidebarProps {
