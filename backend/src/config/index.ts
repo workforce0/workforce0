@@ -37,6 +37,10 @@ const envSchema = z.object({
   OLLAMA_KEEP_ALIVE: optionalString,
   // Cap concurrent loaded models on the Ollama server (defaults to 1 for memory safety).
   OLLAMA_MAX_LOADED_MODELS: z.coerce.number().int().min(1).max(8).default(1),
+  // Default Ollama model emitted as an env hint by the Step 0 setup wizard
+  // (see backend/src/routes/setup-step0.routes.ts). Optional; used only as
+  // a hint surfaced back to the installer during BYOK config.
+  OLLAMA_DEFAULT_MODEL: optionalString,
 
   // Local STT (Whisper) — optional, enables self-hosted transcription
   WHISPER_BASE_URL: optionalString,
@@ -46,7 +50,23 @@ const envSchema = z.object({
 
   // Provider chain for STT routing — comma-separated provider names, tried in order.
   // "local,openai" prefers the on-prem Whisper service then falls back to OpenAI.
-  STT_PROVIDER_CHAIN: z.string().optional().default('local,openai'),
+  // Allowed providers: local, openai, deepgram. Kept as a string here (parsing
+  // is done in the DI container); refine() rejects typos at boot.
+  STT_PROVIDER_CHAIN: z
+    .string()
+    .optional()
+    .default('local,openai')
+    .refine(
+      (v) => {
+        const allowed = new Set(['local', 'openai', 'deepgram']);
+        const parts = v.split(',').map((s) => s.trim()).filter(Boolean);
+        return parts.length > 0 && parts.every((p) => allowed.has(p));
+      },
+      {
+        message:
+          'STT_PROVIDER_CHAIN must be a non-empty comma-separated list of: local, openai, deepgram',
+      },
+    ),
 
   // Webhook configuration
   WEBHOOK_BASE_URL: optionalUrl,  // Base URL for webhooks (e.g., ngrok tunnel)

@@ -39,6 +39,18 @@ describe('VexaProvider', () => {
     );
   });
 
+  it('scheduleBot falls back to "scheduled" when Vexa returns an unknown status', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'vbot-2', status: 'queued' }), { status: 201 }),
+    );
+    const p = new VexaProvider({ baseUrl });
+    const r = await p.scheduleBot({ meetingUrl: 'https://meet.google.com/x', meetingId: 'm', tenantId: 't' });
+    // 'queued' is a valid Vexa status but NOT part of ScheduleBotResult's union
+    // ('scheduled' | 'joining' | 'failed'), so it must coerce to 'scheduled'.
+    expect(r.status).toBe('scheduled');
+    expect(r.botId).toBe('vbot-2');
+  });
+
   it('cancelBot DELETEs the bot', async () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const p = new VexaProvider({ baseUrl });
@@ -55,6 +67,14 @@ describe('VexaProvider', () => {
     );
     const p = new VexaProvider({ baseUrl });
     await expect(p.getTranscript('vbot-1')).resolves.toBeNull();
+  });
+
+  it('getTranscript throws when bot status is "failed" (terminal)', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'failed' }), { status: 200 }),
+    );
+    const p = new VexaProvider({ baseUrl });
+    await expect(p.getTranscript('vbot-1')).rejects.toThrow(/failed to capture/i);
   });
 
   it('getTranscript maps segments when ready', async () => {

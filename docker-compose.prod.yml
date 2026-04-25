@@ -137,15 +137,25 @@ services:
   # ---------------------------------------------------------------------------
   # Whisper STT (faster-whisper-server, opt-in via COMPOSE_PROFILES=local-stt)
   # ---------------------------------------------------------------------------
+  # Pinned to 0.5.0-cpu (last stable semver tag on Docker Hub as of 2026-04;
+  # newer tags are 0.6.0-rc.* release candidates). Upstream project was renamed
+  # to `speaches-ai/speaches`; the `fedirz/faster-whisper-server` image is the
+  # frozen pre-rename build. Tag list:
+  # https://hub.docker.com/r/fedirz/faster-whisper-server/tags
+  #
+  # Env vars use Pydantic's `env_nested_delimiter="__"` (double underscore)
+  # for nested settings on the WhisperConfig model. Single underscores are
+  # silently ignored. Source:
+  # https://github.com/fedirz/faster-whisper-server/blob/v0.5.0/src/faster_whisper_server/config.py
   whisper:
-    image: fedirz/faster-whisper-server:latest-cpu
+    image: fedirz/faster-whisper-server:0.5.0-cpu
     container_name: workforce0-whisper
     restart: unless-stopped
     profiles: ["local-stt"]
     environment:
-      WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}
-      WHISPER_INFERENCE_DEVICE: ${WHISPER_INFERENCE_DEVICE:-auto}
-      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER__MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}
+      WHISPER__INFERENCE_DEVICE: ${WHISPER_INFERENCE_DEVICE:-auto}
+      WHISPER__COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
       PRELOAD_MODELS: '["${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}"]'
     volumes:
       - whisper_cache:/root/.cache/huggingface

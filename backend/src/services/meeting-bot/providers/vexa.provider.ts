@@ -32,6 +32,12 @@ interface VexaBotStatusBody {
   segments?: Array<{ speaker: string; text: string; start: number; end: number }>;
 }
 
+const VALID_SCHEDULE_STATUSES = new Set<ScheduleBotResult['status']>([
+  'scheduled',
+  'joining',
+  'failed',
+]);
+
 export class VexaProvider implements MeetingBotProvider {
   readonly id: ProviderId = 'vexa';
   readonly displayName = 'Vexa (bundled)';
@@ -65,7 +71,13 @@ export class VexaProvider implements MeetingBotProvider {
       throw new Error(`Vexa scheduleBot failed: ${res.status} ${body}`);
     }
     const data = (await res.json()) as { id: string; status?: string };
-    return { botId: data.id, status: (data.status as ScheduleBotResult['status']) ?? 'scheduled' };
+    // Vexa's status enum is broader than ScheduleBotResult's; runtime-validate
+    // and fall back to 'scheduled' on anything outside the known union to
+    // keep the router contract intact.
+    const candidate = data.status as ScheduleBotResult['status'] | undefined;
+    const status: ScheduleBotResult['status'] =
+      candidate && VALID_SCHEDULE_STATUSES.has(candidate) ? candidate : 'scheduled';
+    return { botId: data.id, status };
   }
 
   async cancelBot(botId: string): Promise<void> {
@@ -81,6 +93,11 @@ export class VexaProvider implements MeetingBotProvider {
       throw new Error(`Vexa getTranscript failed: ${res.status}`);
     }
     const data = (await res.json()) as VexaBotStatusBody;
+    // 'failed' is a permanent terminal state — surface as an error so the
+    // caller doesn't keep polling thinking the transcript is still pending.
+    if (data.status === 'failed') {
+      throw new Error('Vexa bot failed to capture meeting');
+    }
     if (data.status !== 'completed' || !data.segments || data.segments.length === 0) return null;
 
     const segments: TranscriptSegment[] = data.segments.map((s) => ({
