@@ -21,6 +21,10 @@ deploys by itself.
 
 [What it does](#what-it-does) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Development](#development) · [Architecture](#architecture) · [BYOK](#bring-your-own-keys-byok) · [Contributing](#contributing)
 
+![Architecture: Meeting Brain → BA Agent → Architect/Supervisor → Dev Agent → QA Agent → Memory Optimizer, with Chief of Staff routing approvals to the Human Executive over Slack/WhatsApp/Email.](docs/assets/architecture.jpg)
+
+*Cycle: Meeting → PRD → Review → Dev → QA → Ship → Memory*
+
 ![Dashboard](docs/assets/screenshots/03-dashboard.png)
 
 </div>

@@ -18,6 +18,12 @@ hero:
 ---
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { Image } from "astro:assets";
+import architecture from "../../assets/architecture.png";
+
+<Image src={architecture} alt="Workforce0 architecture: Meeting Brain feeds the BA Agent, who hands a PRD to the Architect/Supervisor; Dev Agent codes and pushes to GitHub; QA Agent reviews; Chief of Staff sends approvals to a Human Executive over Slack/WhatsApp/Email; Memory Optimizer archives the cycle." />
+
+*Cycle: Meeting → PRD → Review → Dev → QA → Ship → Memory*
 
 ## What is Workforce0?
 
