@@ -28,6 +28,26 @@ const envSchema = z.object({
   OPENAI_API_KEY: optionalString,  // For OpenAI critique in AI Council
   ANTHROPIC_API_KEY: optionalString,  // Reserved: Dev Agent Claude integration (Sprint 2)
 
+  // Local LLM (Ollama) — optional, enables on-prem inference for Council fallback
+  // and STT post-processing without leaving the host. When OLLAMA_BASE_URL is unset
+  // the service stays disabled and the AI Council skips it.
+  OLLAMA_BASE_URL: optionalString,
+  // How long Ollama should keep the model loaded after a request (Ollama default: 5m).
+  // Setting "30m" or "1h" reduces cold-load latency for bursty agent traffic.
+  OLLAMA_KEEP_ALIVE: optionalString,
+  // Cap concurrent loaded models on the Ollama server (defaults to 1 for memory safety).
+  OLLAMA_MAX_LOADED_MODELS: z.coerce.number().int().min(1).max(8).default(1),
+
+  // Local STT (Whisper) — optional, enables self-hosted transcription
+  WHISPER_BASE_URL: optionalString,
+  // Multiplier applied to the audio duration to compute Whisper request timeout
+  // (e.g. 2 = allow up to 2x audio length before timing out).
+  WHISPER_TIMEOUT_MULT: z.coerce.number().min(1).max(10).default(2),
+
+  // Provider chain for STT routing — comma-separated provider names, tried in order.
+  // "local,openai" prefers the on-prem Whisper service then falls back to OpenAI.
+  STT_PROVIDER_CHAIN: z.string().optional().default('local,openai'),
+
   // Webhook configuration
   WEBHOOK_BASE_URL: optionalUrl,  // Base URL for webhooks (e.g., ngrok tunnel)
 
