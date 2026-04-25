@@ -73,15 +73,25 @@ WhatsApp messages are limited and the audit trail lives in the app.
 
 ## What's optional
 
-- WhatsApp itself is optional. If `TWILIO_ACCOUNT_SID` /
-  `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER` aren't all set, the
-  WhatsApp channel doesn't register at boot — outbound stays silent
-  and the inbound webhook isn't mounted at all (so Twilio gets a
-  404 if you accidentally aim it at this instance). When the creds
-  *are* present, the inbound webhook in `production` requires a
-  valid `X-Twilio-Signature`; in non-production builds it logs a
-  warning and accepts unsigned requests so local development works
-  without a public URL.
+- The **outbound** WhatsApp adapter is optional. If
+  `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER`
+  aren't all set, the channel adapter doesn't register at boot and
+  the chief-of-staff agent simply skips WhatsApp delivery for any
+  recipient that has it as a preferred channel.
+- The **inbound** webhook (`POST /webhooks/twilio/whatsapp`) is
+  registered unconditionally. Behaviour when Twilio hits it depends
+  on signature + env:
+  - In `production` with `TWILIO_AUTH_TOKEN` unset, the handler
+    rejects with `500 signature_verification_not_configured` (the
+    only sensible response — we cannot validate the request).
+  - In `production` with the token set, requests must carry a valid
+    `X-Twilio-Signature` (`401 missing_signature` /
+    `401 invalid_signature` otherwise).
+  - In non-production with the token unset, signature verification
+    is skipped with a warning so local development against
+    `localhost` works without a public URL.
+  - In non-production with the token set, signature is still
+    validated — same as production.
 - Per-exec: an exec who hasn't added a WhatsApp number simply
   receives Slack / Email / Google Chat instead, depending on what
   they opted into.

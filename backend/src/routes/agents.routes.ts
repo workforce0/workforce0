@@ -422,7 +422,17 @@ export async function agentRoutes(fastify: FastifyInstance): Promise<void> {
             engagementId = engagement.id;
             // Idempotency: if a dev_agent ticket already exists for
             // this PRD (re-approval, retry, two clicks), reuse it
-            // instead of minting a duplicate.
+            // instead of minting a duplicate. NOTE — this is an
+            // in-process check-then-act; two truly concurrent approves
+            // can both pass here and create duplicates. The proper
+            // long-term fix is a unique index on
+            // `(tenantId, roleSlug, payload->>prdId)` or a dedupeKey
+            // column the ticket model enforces atomically. For now
+            // the practical incidence is low (humans don't double-
+            // click in <50ms windows) and approval-fanout's reply
+            // path additionally consumes a single-use Redis token
+            // before reaching here, which collapses the WhatsApp /
+            // Slack reply race entirely. Tracked for follow-up.
             const existingDev = await (fastify.services.prisma as any).ticket.findFirst({
               where: {
                 tenantId,
@@ -472,12 +482,16 @@ export async function agentRoutes(fastify: FastifyInstance): Promise<void> {
                 });
               } catch (advanceErr) {
                 try {
-                  await (fastify.services.prisma as any).ticket.update({
-                    where: { id: created.ticket.id },
+                  // Tenant-scoped updateMany so the cleanup respects
+                  // RLS / tenant boundaries (route-layer prisma direct
+                  // access is acknowledged tech debt — see
+                  // ticketService TODO).
+                  await (fastify.services.prisma as any).ticket.updateMany({
+                    where: { id: created.ticket.id, tenantId },
                     data: { status: 'cancelled', error: 'advancePhase failed after ticket creation' },
                   });
-                  await (fastify.services.prisma as any).agentTask.update({
-                    where: { id: created.agentTaskId },
+                  await (fastify.services.prisma as any).agentTask.updateMany({
+                    where: { id: created.agentTaskId, tenantId },
                     data: { status: 'failed', error: 'advancePhase failed after task creation' },
                   });
                 } catch { /* best-effort */ }

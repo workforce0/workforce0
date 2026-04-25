@@ -211,7 +211,14 @@ export class EngagementService {
         // produce `''` and bypass the legacy-id fallback.
         const taskId = (output?.taskId as string) || undefined;
         const ticketId = (output?.ticketId as string) || undefined;
-        if (prdId) {
+        // The DEV_AGENT_PROCESS handler treats `taskId` as required (it
+        // updates `agentTask` rows by that id). Dispatching without one
+        // queues a job that will fail mid-flight in the processor, so
+        // we refuse to queue and log a skip instead. Callers that want
+        // dev work dispatched MUST mint a ticket+task first and pass
+        // both ids through `output` (see routes/agents.routes.ts and
+        // services/approval-fanout/approval-fanout.service.ts).
+        if (prdId && taskId) {
           await this.queueService.addJob('dev_agent_process', {
             prdId,
             engagementId,
@@ -219,6 +226,11 @@ export class EngagementService {
             taskId,
             ticketId,
           });
+        } else if (prdId) {
+          logger.warn(
+            { engagementId, phase, agentType, prdId },
+            'Skipping dev_agent dispatch: caller did not supply a taskId in output',
+          );
         }
         break;
       }
