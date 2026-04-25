@@ -228,6 +228,14 @@ import { SSEService } from '../services/sse/sse.service.js';
 import { AgentJobQueue } from '../services/agent-hub/job-queue.js';
 import { AgentHub } from '../services/agent-hub/agent-hub.service.js';
 
+// Meeting bot abstraction (Step 0 — §6 + §7)
+import {
+  MeetingBotRouter,
+  ManualProvider,
+  RecallProvider,
+  VexaProvider,
+} from '../services/meeting-bot/index.js';
+
 /**
  * Interface defining all available services.
  *
@@ -389,6 +397,12 @@ export interface Services {
   // AgentHub (WebSocket agent connections + job queue)
   agentJobQueue: AgentJobQueue;
   agentHub: AgentHub;
+
+  // Meeting bot router (live-capture provider abstraction —
+  // resolves vexa | recall | manual per tenant at request time).
+  meetingBotRouter: MeetingBotRouter;
+  /** Shared with the Recall webhook route for HMAC verification. */
+  recallWebhookSecret: string | undefined;
 }
 
 /**
@@ -1074,6 +1088,43 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   const skillRankingService = new SkillRankingService(rlsPrisma);
 
   // ==========================================================================
+  // STEP 6.96: Meeting bot router (live-capture provider abstraction)
+  // ==========================================================================
+  // Build providers; isAvailable() is checked at request time, so even
+  // with no Recall key or no Vexa stack we register all three and let
+  // the router route around unavailable ones.
+  const manualProvider = new ManualProvider();
+  const recallProvider = new RecallProvider({
+    apiKey: config.RECALL_API_KEY,
+    webhookSecret: config.RECALL_WEBHOOK_SECRET,
+  });
+  const vexaProvider = new VexaProvider({
+    baseUrl: config.VEXA_API_URL ?? 'http://vexa-api:18056',
+  });
+
+  // Tenant settings adapter — wraps the prisma model in the shape
+  // MeetingBotRouter expects. Inline adapter avoids a premature
+  // TenantSettingsService extraction.
+  const tenantSettingsAdapter = {
+    get: async (tenantId: string) => {
+      const row = await (rlsPrisma as any).tenantSettings.findUnique({ where: { tenantId } });
+      return {
+        meetingBotProviderId: (row?.meetingBotProviderId ?? null) as
+          | 'vexa'
+          | 'recall'
+          | 'manual'
+          | null,
+      };
+    },
+  };
+
+  const meetingBotRouter = new MeetingBotRouter(
+    [vexaProvider, recallProvider, manualProvider],
+    tenantSettingsAdapter,
+  );
+  logger.info('MeetingBotRouter initialized with vexa/recall/manual providers');
+
+  // ==========================================================================
   // STEP 7: Register all services on Fastify instance
   // ==========================================================================
   const services: Services = {
@@ -1151,6 +1202,8 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     googleOAuthService,
     agentJobQueue,
     agentHub,
+    meetingBotRouter,
+    recallWebhookSecret: config.RECALL_WEBHOOK_SECRET,
   };
 
   // Decorate Fastify instance with services

@@ -41,6 +41,14 @@ const envSchema = z.object({
 
   GCHAT_WEBHOOK_URL: optionalUrl,
 
+  // Meeting bot providers (Step 0 — meeting-bot abstraction)
+  // RECALL_API_KEY enables the BYOK Recall.ai provider; the webhook secret
+  // is used by the HMAC-validated Recall webhook route. VEXA_API_URL points
+  // at the bundled Vexa container (default http://vexa-api:18056).
+  RECALL_API_KEY: optionalString,
+  RECALL_WEBHOOK_SECRET: optionalString,
+  VEXA_API_URL: optionalString,
+
   // Google Workspace
   GOOGLE_SERVICE_ACCOUNT_KEY: optionalString,  // JSON string of service account credentials
   GOOGLE_DRIVE_FOLDER_ID: optionalString,  // Default folder for PRD exports
