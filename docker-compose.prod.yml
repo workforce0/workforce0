@@ -69,6 +69,14 @@ services:
       # Local storage lives under /app/data/uploads inside the container.
       # The volume below persists uploads across container restarts.
       STORAGE_ROOT: /app/data/uploads
+      # Plan 2: defaults point at the internal `ollama` and `whisper`
+      # services (started via COMPOSE_PROFILES=local-llm / local-stt).
+      # When those profiles aren't enabled, the containers don't run,
+      # OllamaService.isAvailable()/LocalWhisperProvider.isAvailable()
+      # return false, and the AI Council / STT router falls through to
+      # the next provider in the chain. Safe to leave set unconditionally.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      WHISPER_BASE_URL: ${WHISPER_BASE_URL:-http://whisper:8000}
     volumes:
       # Meeting audio/video uploads for the local storage driver. Not used
       # when STORAGE_DRIVER=s3 — safe to keep mounted either way.
@@ -175,12 +183,62 @@ services:
   # Plan 2 adds the `whisper` service. For Plan 1 we deliberately do
   # NOT add vexa-transcription — it would crash without whisper.
 
+  # ---------------------------------------------------------------------------
+  # Ollama (local LLM, opt-in via COMPOSE_PROFILES=local-llm)
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:0.6
+    container_name: workforce0-ollama
+    restart: unless-stopped
+    profiles: ["local-llm"]
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+    volumes:
+      - ollama_cache:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - workforce0
+
+  # ---------------------------------------------------------------------------
+  # Whisper STT (faster-whisper-server, opt-in via COMPOSE_PROFILES=local-stt)
+  # ---------------------------------------------------------------------------
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cpu
+    container_name: workforce0-whisper
+    restart: unless-stopped
+    profiles: ["local-stt"]
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}
+      WHISPER_INFERENCE_DEVICE: ${WHISPER_INFERENCE_DEVICE:-auto}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      PRELOAD_MODELS: '["${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}"]'
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    networks:
+      - workforce0
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
   backend_uploads:
+    driver: local
+  ollama_cache:
+    driver: local
+  whisper_cache:
     driver: local
 
 networks:
