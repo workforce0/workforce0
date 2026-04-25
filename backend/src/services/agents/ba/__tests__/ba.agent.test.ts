@@ -42,7 +42,7 @@ describe('BAAgent', () => {
 
     mockModelRegistry = {
       resolveModel: vi.fn().mockResolvedValue({
-        modelId: 'google/gemini-2.0-flash-thinking',
+        modelId: 'gemini-3.1-pro',
         provider: 'google',
         confidenceThreshold: 0.85,
         maxSteps: 25,
@@ -501,7 +501,7 @@ describe('BAAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'google/gemini-2.0-flash-thinking',
+        model: 'gemini-3.1-pro',
       }),
     );
   });
@@ -527,7 +527,7 @@ describe('BAAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'google/gemini-2.0-flash-thinking',
+        model: 'gemini-3.1-pro',
       }),
     );
   });

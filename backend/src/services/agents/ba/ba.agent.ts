@@ -49,7 +49,7 @@ export class BAAgent extends BaseConsultant {
         tools: createBATools({ prisma, commsRouter, memoryService }),
         maxSteps: 25,
         confidenceThreshold: 0.85,
-        defaultModel: { provider: 'google', modelId: 'google/gemini-2.0-flash-thinking' },
+        defaultModel: { provider: 'google', modelId: 'gemini-3.1-pro' },
       },
       skillLoader,
       undefined, // pipeline — unchanged

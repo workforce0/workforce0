@@ -32,6 +32,10 @@
  */
 
 import { createChildLogger } from '../../lib/logger.js';
+import {
+  emitCouncilSessionComplete,
+  type CouncilExitReason,
+} from '../../lib/telemetry/council-telemetry.js';
 import { GeminiService, GeneratedPRD, GeneratePRDOptions } from './gemini.service.js';
 import { OpenAIService, CritiqueResult, ConsensusVote } from './openai.service.js';
 
@@ -161,7 +165,8 @@ export class AICouncil {
    */
   async generatePRDWithCouncil(
     transcript: string,
-    options: GeneratePRDOptions = {}
+    options: GeneratePRDOptions = {},
+    agentType: string = 'ba_agent'
   ): Promise<CouncilDecision> {
     const startTime = Date.now();
     const timing = { primaryGeneration: 0, critique: 0, consensus: 0, revision: 0, total: 0 };
@@ -169,6 +174,9 @@ export class AICouncil {
     let critique: CritiqueResult | undefined;
     let iterationCount = 0;
     let consensusReached = false;
+    let exitReason: CouncilExitReason = 'first_pass';
+    let totalCostUsd = 0;
+    try {
 
     this.logger.info('Starting council PRD generation', {
       transcriptLength: transcript.length,
@@ -183,7 +191,7 @@ export class AICouncil {
 
     // Add Gemini's implicit vote
     votes.push({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.1-flash',
       vote: prd.confidence >= 0.8 ? 'approve' : 'revise',
       confidence: prd.confidence,
       concerns: [],
@@ -214,13 +222,14 @@ export class AICouncil {
       if (critique.overallAssessment === 'approve') {
         // Critique approved, add vote and exit loop
         votes.push({
-          model: 'gpt-4o-critique',
+          model: 'gpt-5.5-critique',
           vote: 'approve',
           confidence: critique.critiqueConfidence,
           concerns: [],
           reasoning: critique.reasoning,
         });
         consensusReached = true;
+        exitReason = 'threshold';
       } else if (critique.overallAssessment === 'needs_revision' && iterationCount < this.config.maxCritiqueIterations) {
         // Critique wants revision - regenerate PRD with feedback
         this.logger.info('Regenerating PRD with critique feedback', {
@@ -243,7 +252,7 @@ export class AICouncil {
 
         // Add revision vote
         votes.push({
-          model: `gemini-2.0-flash-revision-${iterationCount}`,
+          model: `gemini-3.1-flash-revision-${iterationCount}`,
           vote: prd.confidence >= 0.8 ? 'approve' : 'revise',
           confidence: prd.confidence,
           concerns: [],
@@ -252,14 +261,20 @@ export class AICouncil {
       } else {
         // Critique rejected or max iterations reached
         votes.push({
-          model: 'gpt-4o-critique',
+          model: 'gpt-5.5-critique',
           vote: critique.overallAssessment === 'reject' ? 'reject' : 'revise',
           confidence: critique.critiqueConfidence,
           concerns: critique.issues.map(i => i.description),
           reasoning: critique.reasoning,
         });
+        exitReason = critique.overallAssessment === 'reject' ? 'rejected' : 'max_rounds';
         break;
       }
+    }
+    // If the loop exited because iterationCount hit the cap mid-revise (no
+    // explicit break), reflect that.
+    if (!consensusReached && iterationCount >= this.config.maxCritiqueIterations && exitReason === 'first_pass') {
+      exitReason = 'max_rounds';
     }
 
     // Step 3: Final Consensus Vote (if enabled and not already reached)
@@ -284,15 +299,34 @@ export class AICouncil {
       timing,
     });
 
+    const cost = this.estimateCost(transcript.length, timing);
+    totalCostUsd = cost.total;
+
     return {
       ...decision,
       prd,
       critique,
       votes,
       consensusReached,
-      estimatedCost: this.estimateCost(transcript.length, timing),
+      estimatedCost: cost,
       timing: { ...timing, revision: timing.revision },
     };
+    } catch (err) {
+      exitReason = 'error';
+      throw err;
+    } finally {
+      timing.total = Date.now() - startTime;
+      emitCouncilSessionComplete({
+        agentType,
+        rounds: iterationCount,
+        exitReason,
+        totalLatencyMs: timing.total,
+        totalCostUsd,
+        primaryProvider: 'google',
+        primaryModelId: 'gemini-3.1-flash',
+        reviewerCount: this.openai.isEnabled() && this.config.enableCritique ? 1 : 0,
+      });
+    }
   }
 
   /**
@@ -356,10 +390,14 @@ export class AICouncil {
    */
   async generatePRDQuick(
     transcript: string,
-    options: GeneratePRDOptions = {}
+    options: GeneratePRDOptions = {},
+    agentType: string = 'ba_agent'
   ): Promise<CouncilDecision> {
     const startTime = Date.now();
 
+    let exitReason: CouncilExitReason = 'first_pass';
+    let totalCostUsd = 0;
+    try {
     const prd = await this.gemini.generatePRD(transcript, options);
 
     const timing = {
@@ -378,7 +416,7 @@ export class AICouncil {
       confidence: prd.confidence,
       prd,
       votes: [{
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.1-flash',
         vote: 'approve',
         confidence: prd.confidence,
         concerns: [],
@@ -386,9 +424,28 @@ export class AICouncil {
       }],
       outstandingIssues: [],
       clarificationQuestions: [],
-      estimatedCost: this.estimateCost(transcript.length, timing),
+      estimatedCost: ((): CouncilDecision['estimatedCost'] => {
+        const c = this.estimateCost(transcript.length, timing);
+        totalCostUsd = c.total;
+        return c;
+      })(),
       timing,
     };
+    } catch (err) {
+      exitReason = 'error';
+      throw err;
+    } finally {
+      emitCouncilSessionComplete({
+        agentType,
+        rounds: 0,
+        exitReason,
+        totalLatencyMs: Date.now() - startTime,
+        totalCostUsd,
+        primaryProvider: 'google',
+        primaryModelId: 'gemini-3.1-flash',
+        reviewerCount: 0,
+      });
+    }
   }
 
   /**

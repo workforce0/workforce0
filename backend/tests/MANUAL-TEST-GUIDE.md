@@ -128,35 +128,31 @@ curl -X POST http://localhost:3000/api/webhooks/gchat \
 
 ---
 
-## Real Recall.ai Testing
+## Real Meeting Bot Testing (Vexa BYO)
 
-For actual meeting bot testing:
+For end-to-end meeting bot testing, deploy a Vexa instance separately and point Workforce0 at it:
 
-1. **Sign up** at https://recall.ai
-2. **Add to .env:**
+1. **Deploy Vexa** following [their guide](https://github.com/Vexa-ai/vexa/tree/main/deploy).
+2. **Set in `.env`:**
    ```
-   RECALL_API_KEY=your_api_key
-   RECALL_WEBHOOK_SECRET=your_webhook_secret
+   VEXA_API_URL=http://your-vexa-host:18056
    ```
-3. **Expose your server** using ngrok:
-   ```bash
-   ngrok http 3000
-   ```
-4. **Configure webhook URL** in Recall.ai dashboard
-5. **Schedule a bot** via API or dashboard
-6. **Join the meeting** - bot will join and transcribe!
+3. **Schedule a bot** via `POST /api/meetings/schedule` with the meeting URL.
+4. **Watch the logs** — Workforce0's `VexaProvider` calls `POST /bots`, polls `GET /bots/:id/transcript`.
+
+Tracking issue for first-class Vexa bundling: [#37](https://github.com/workforce0/workforce0/issues/37).
 
 ---
 
 ## Troubleshooting
 
 ### "Meeting not found" error
-- Make sure the `externalId` in the meeting matches the `bot_id` in webhooks
+- Make sure the `externalId` in the meeting matches the `bot_id` from the bot provider.
 
 ### Transcription chunks not stored
-- Check server logs for errors
-- Verify MeetingService is initialized (needs RECALL_API_KEY)
+- Check server logs for errors.
+- Verify `MeetingService` is initialized.
 
 ### BA Agent task not queued
-- Requires real Recall.ai API to fetch final transcript
-- Or the stored chunks can be used as fallback (future enhancement)
+- Requires the configured bot provider to be reachable for transcript fetch.
+- Manual upload via the presigned-upload flow always works as a fallback.

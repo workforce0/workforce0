@@ -12,7 +12,8 @@ describe('pickModel', () => {
       availableProviders: ['google', 'anthropic', 'openai'],
       priority: 'cheap',
     });
-    expect(result?.id).toBe('gemini-2.0-flash');
+    // gpt-5-nano: 0.05 + 0.40 = 0.45 (cheapest)
+    expect(result?.id).toBe('gpt-5-nano');
   });
 
   it('respects provider availability — no anthropic key means no Claude', () => {
@@ -38,9 +39,9 @@ describe('pickModel', () => {
       minContextWindow: 900_000,
       priority: 'cheap',
     });
-    // Only models with ≥900k context: Opus 4.7 (1M), Gemini 2.0 Flash (1M), Gemini 2.5 Pro (2M)
-    // Cheapest of those is Gemini 2.0 Flash
-    expect(result?.id).toBe('gemini-2.0-flash');
+    // Only models with ≥900k context: Opus 4.7 (1M), Gemini 3.1 Flash (1M), Gemini 3.1 Pro (2M)
+    // Cheapest of those is Gemini 3.1 Flash
+    expect(result?.id).toBe('gemini-3.1-flash');
   });
 
   it('respects requiredCapabilities', () => {
@@ -49,8 +50,9 @@ describe('pickModel', () => {
       requiredCapabilities: ['voice'],
       priority: 'cheap',
     });
-    // Only voice-capable models: Gemini 2.0 Flash, GPT-4o
-    expect(result?.id).toBe('gemini-2.0-flash');
+    // Only voice-capable models: Gemini 3.1 Flash, GPT-5.5
+    // Cheapest: Gemini 3.1 Flash (0.10 + 0.40 = 0.50 vs GPT-5.5 17.50)
+    expect(result?.id).toBe('gemini-3.1-flash');
   });
 
   it('respects maxCostPerMillion', () => {
@@ -59,17 +61,17 @@ describe('pickModel', () => {
       maxCostPerMillion: 2,
       priority: 'cheap',
     });
-    // Total cost (input + output) ≤ $2 leaves: gemini 2.0 flash (0.375),
-    // claude haiku (4.8 — fails), gpt-4o-mini (0.75), gemini 2.5 pro (6.25 — fails)
-    // Cheapest pass: Gemini 2.0 Flash
-    expect(result?.id).toBe('gemini-2.0-flash');
+    // Total cost (input + output) ≤ $2 leaves: gpt-5-nano (0.45),
+    // gemini 3.1 flash (0.50), claude haiku (1.50), gemini 3.1 pro (6.25 — fails)
+    // Cheapest pass: gpt-5-nano
+    expect(result?.id).toBe('gpt-5-nano');
   });
 
   it('returns null when constraints cannot be satisfied', () => {
     const result = pickModel({
       availableProviders: ['openai'],
       requiredCapabilities: ['voice', 'long_context'],
-      // OpenAI has voice (gpt-4o) but no long_context model
+      // OpenAI has voice (gpt-5.5) but no long_context model
     });
     expect(result).toBeNull();
   });

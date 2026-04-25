@@ -21,6 +21,10 @@ deploys by itself.
 
 [What it does](#what-it-does) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Development](#development) · [Architecture](#architecture) · [BYOK](#bring-your-own-keys-byok) · [Contributing](#contributing)
 
+![Architecture: Meeting Brain → BA Agent → Architect/Supervisor → Dev Agent → QA Agent → Memory Optimizer, with Chief of Staff routing approvals to the Human Executive over Slack/WhatsApp/Email.](docs/assets/architecture.jpg)
+
+*Cycle: Meeting → PRD → Review → Dev → QA → Ship → Memory*
+
 ![Dashboard](docs/assets/screenshots/03-dashboard.png)
 
 </div>
@@ -156,6 +160,8 @@ cp .env.example .env
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+> **Going local?** See the [Step 0 — Local Everything](#step-0--local-everything) section below to bring up Ollama and faster-whisper alongside the core stack. Vexa is BYO (run separately and point `VEXA_API_URL` at it); when Vexa isn't reachable, meetings fall through to manual upload.
+
 The backend container applies pending Prisma migrations on boot, so
 there's no manual `db migrate` step — bring up the stack, wait ~30s for
 health checks, then open **<http://localhost:3001>** and create your
@@ -171,6 +177,32 @@ account. The in-app setup wizard handles the rest.
 | Render | [Blueprint →](https://render.com/deploy) | ✅ |
 | Fly.io | [`docs/one-click-deploy.md`](./docs/one-click-deploy.md#flyio) | ✅ |
 | DigitalOcean | [Marketplace →](./docs/one-click-deploy.md#digitalocean) | 💰 |
+
+---
+
+## Step 0 — Local Everything
+
+Workforce0 ships with optional local-first bundles. One `docker compose up` can start:
+
+- **Local LLMs** (Qwen 3.5 / Mistral Small 3 via Ollama)
+- **Local STT** (faster-whisper-server)
+- **Optional integration with self-hosted Vexa (BYO endpoint)** — point `VEXA_API_URL` at any Vexa instance you run separately
+
+Activate via Compose profiles:
+
+```bash
+COMPOSE_PROFILES=local-llm,local-stt docker compose -f docker-compose.prod.yml up -d
+```
+
+The setup wizard at `/setup` will detect your hardware and recommend a tier. See:
+
+- [Local Models](https://docs.workforce0.com/integrations/local-models/) — Ollama bundle
+- [Transcription](https://docs.workforce0.com/integrations/transcription/) — faster-whisper bundle
+- [Meeting Bot](https://docs.workforce0.com/integrations/meeting-bot/) — Vexa BYO + manual upload fallback
+- [Setup Wizard](https://docs.workforce0.com/self-hosting/wizard/) — full walkthrough
+- [Diagnose](https://docs.workforce0.com/self-hosting/diagnose/) — `bin/diagnose.sh` for troubleshooting
+
+BYOK (Anthropic, OpenAI, Google) works alongside local models — Council uses local as fallback.
 
 ---
 

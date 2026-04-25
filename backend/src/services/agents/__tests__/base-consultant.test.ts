@@ -36,7 +36,7 @@ describe('BaseConsultant', () => {
       tools: [],
       maxSteps: 10,
       confidenceThreshold: 0.85,
-      defaultModel: { provider: 'google', modelId: 'gemini-2.0-flash' },
+      defaultModel: { provider: 'google', modelId: 'gemini-3.1-flash' },
     };
   });
 
@@ -165,23 +165,23 @@ describe('BaseConsultant', () => {
 
   describe('resolveModelConfig', () => {
     it('uses model registry when available', async () => {
-      mockModelRegistry.resolveModel.mockResolvedValue({ provider: 'anthropic', modelId: 'claude-sonnet-4' });
+      mockModelRegistry.resolveModel.mockResolvedValue({ provider: 'anthropic', modelId: 'claude-sonnet-4-6' });
       const consultant = new TestConsultant(mockModelClient, mockModelRegistry, config, mockSkillLoader);
       const model = await consultant.resolveModelConfig('tenant-1');
-      expect(model).toEqual({ provider: 'anthropic', modelId: 'claude-sonnet-4' });
+      expect(model).toEqual({ provider: 'anthropic', modelId: 'claude-sonnet-4-6' });
     });
 
     it('falls back to default model', async () => {
       const consultant = new TestConsultant(mockModelClient, mockModelRegistry, config, mockSkillLoader);
       const model = await consultant.resolveModelConfig('tenant-1');
-      expect(model).toEqual({ provider: 'google', modelId: 'gemini-2.0-flash' });
+      expect(model).toEqual({ provider: 'google', modelId: 'gemini-3.1-flash' });
     });
 
     it('falls back to default when resolveModel throws', async () => {
       mockModelRegistry.resolveModel.mockRejectedValue(new Error('Unknown agent type'));
       const consultant = new TestConsultant(mockModelClient, mockModelRegistry, config, mockSkillLoader);
       const model = await consultant.resolveModelConfig('tenant-1');
-      expect(model).toEqual({ provider: 'google', modelId: 'gemini-2.0-flash' });
+      expect(model).toEqual({ provider: 'google', modelId: 'gemini-3.1-flash' });
     });
   });
 

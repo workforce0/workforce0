@@ -109,6 +109,7 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
                   meetingId: { type: 'string' },
                   botId: { type: 'string' },
                   status: { type: 'string' },
+                  provider: { type: 'string' },
                   estimatedJoinTime: { type: 'string', format: 'date-time' },
                 },
               },
@@ -117,16 +118,66 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (_request: FastifyRequest, reply: FastifyReply) => {
-      // Bot scheduling via Recall.ai has been removed.
-      // Use upload, Google Meet native, or Twilio voice dial-in instead.
-      return reply.status(410).send({
-        success: false,
-        error: {
-          code: 'FEATURE_REMOVED',
-          message: 'Bot scheduling has been removed. Use Upload Recording, Google Meet integration, or Voice Dial-In instead.',
-        },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const tenantId = (request as FastifyRequest & { tenantId: string }).tenantId;
+      const body = request.body as {
+        meetingUrl: string;
+        title?: string;
+        botName?: string;
+        scheduledStart?: string;
+      };
+
+      const provider = await fastify.services.meetingBotRouter.resolveProvider(tenantId);
+
+      if (provider.id === 'manual') {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: 'NO_BOT_PROVIDER',
+            message:
+              'No live-capture provider is configured. Upload the recording after the meeting.',
+          },
+        });
+      }
+
+      const meeting = await fastify.services.meetingService.createScheduled({
+        tenantId,
+        title: body.title ?? 'Scheduled meeting',
+        meetingUrl: body.meetingUrl,
+        source: provider.id,
+        scheduledStart: body.scheduledStart,
       });
+
+      try {
+        const result = await provider.scheduleBot({
+          meetingUrl: body.meetingUrl,
+          meetingId: meeting.id,
+          tenantId,
+          botName: body.botName,
+          startTime: body.scheduledStart,
+        });
+        return reply.status(201).send({
+          success: true,
+          data: {
+            meetingId: meeting.id,
+            botId: result.botId,
+            status: result.status,
+            provider: provider.id,
+            estimatedJoinTime: result.estimatedJoinTime,
+          },
+        });
+      } catch (err) {
+        await fastify.services.meetingService
+          .markFailed(meeting.id, (err as Error).message)
+          .catch(() => {});
+        return reply.status(502).send({
+          success: false,
+          error: {
+            code: 'BOT_SCHEDULE_FAILED',
+            message: (err as Error).message,
+          },
+        });
+      }
     }
   );
 

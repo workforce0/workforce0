@@ -1,6 +1,6 @@
 // mvp/src/types/model-registry.types.ts
 
-export type ProviderName = 'anthropic' | 'google' | 'openai' | 'meta' | 'custom';
+export type ProviderName = 'anthropic' | 'google' | 'openai' | 'meta' | 'ollama' | 'custom';
 
 export type AgentType =
   | 'meeting_brain'

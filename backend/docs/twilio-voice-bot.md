@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Twilio Dial-In Voice Bot enables AI voice participation in meetings where Recall.ai bots cannot speak (e.g., Google Meet joins bots muted and prevents self-unmute).
+The Twilio Dial-In Voice Bot enables AI voice participation in meetings where browser-based meeting bots cannot speak (e.g., Google Meet joins bots muted and prevents self-unmute).
 
 **Solution:** Twilio dials into the meeting as a phone participant and speaks AI responses via bidirectional audio streaming.
 
@@ -12,7 +12,8 @@ The Twilio Dial-In Voice Bot enables AI voice participation in meetings where Re
 Meeting (Google Meet / Zoom / Teams)
 ┌────────────────────────────────────────────────┐
 │                                                │
-│  Recall.ai Bot ──────── transcribes silently   │
+│  Meeting bot ──────────  transcribes silently  │
+│  (Vexa BYO, optional)                          │
 │                                                │
 │  Twilio Phone ────────── speaks AI responses   │
 │  (+1-xxx-xxx-xxxx)       ↕ WebSocket          │
@@ -33,8 +34,9 @@ Meeting (Google Meet / Zoom / Teams)
 │           │                                      │
 │           ▼                                      │
 │  ┌─────────────────┐    ┌────────────────────┐   │
-│  │ Recall Service  │───►│ BA Agent           │   │
-│  │ (transcript)    │    │ (PRD generation)   │   │
+│  │ MeetingBot      │───►│ BA Agent           │   │
+│  │ Provider        │    │ (PRD generation)   │   │
+│  │ (transcript)    │    │                    │   │
 │  └─────────────────┘    └────────────────────┘   │
 └──────────────────────────────────────────────────┘
 ```
@@ -253,7 +255,7 @@ Each platform has different dial-in formats:
 2. **Meeting Starts** → Call `TwilioVoiceService.dialIntoMeeting()`
 3. **Twilio Connects** → WebSocket to `TwilioMediaHandler`
 4. **Audio Flow** → Meeting audio → Gemini → Response audio → Meeting
-5. **Transcript** → Recall.ai sends transcript text to Gemini context
+5. **Transcript** → Configured `MeetingBotProvider` (e.g. Vexa BYO) sends transcript text to Gemini context
 6. **Meeting Ends** → Call `TwilioVoiceService.hangup()` or auto-cleanup
 
 ## Error Handling

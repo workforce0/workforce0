@@ -44,6 +44,14 @@ function buildRaw(provider: ProviderName, opts: CreateModelClientOptions): Model
       return new GoogleClient({ apiKey: opts.apiKey ?? '' });
     case 'openai':
       return new OpenAIClient({ apiKey: opts.apiKey ?? '', baseUrl: opts.baseUrl });
+    case 'ollama': {
+      // Ollama exposes an OpenAI-compatible /v1/chat/completions endpoint, so
+      // we reuse OpenAIClient with a custom baseUrl. The default tracks
+      // docker-compose's bundled `ollama` service. apiKey is unused by Ollama
+      // but the OpenAI client still expects a string — pass a placeholder.
+      const baseUrl = opts.baseUrl ?? 'http://ollama:11434';
+      return new OpenAIClient({ apiKey: opts.apiKey ?? 'ollama', baseUrl });
+    }
     case 'meta':
     case 'custom':
       if (!opts.baseUrl) throw new Error('Custom/Meta providers require baseUrl');

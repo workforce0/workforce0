@@ -33,10 +33,12 @@ status: 'in_progress'
 - Added `handleTranscriptionChunk()` to accumulate real-time chunks in meeting metadata
 - Added `handleStatusUpdate()` to handle status changes and trigger completion
 - Updated `handleMeetingCompleted()` to:
-  1. Fetch transcript from Recall.ai API
+  1. Fetch transcript from the configured `MeetingBotProvider` (Vexa BYO or Manual)
   2. Create `Transcript` record in database with segments, fullText, speakers
   3. Queue BA Agent processing via `MEETING_PROCESS` job
 - Updated di-container to pass `prisma` and `queueService` to MeetingService
+
+> **Historical note:** This issue originally documented a fix in the now-removed Recall.ai integration. The fix is preserved here because the same pattern applies to the current Vexa-via-`MeetingBotProvider` flow.
 
 ---
 

@@ -4,6 +4,14 @@ Track all changes, decisions, and progress for the Product Agent MVP.
 
 ---
 
+## 2026-04-25 — Recall.ai support removed
+
+**Decision:** Remove the direct Recall.ai integration entirely. Replaced with a `MeetingBotProvider` abstraction supporting Vexa (BYO endpoint) and Manual upload. PR #38, issue #37 tracks future first-class Vexa bundling.
+
+Older entries below describe the now-removed Recall.ai code path; they are kept as historical record.
+
+---
+
 ## How to Use This Document
 
 - **New developers**: Read top-to-bottom to understand what's built and why

@@ -42,7 +42,7 @@ export class DevAgent extends BaseConsultant {
         tools: createDevTools({ prisma, memoryService }),
         maxSteps: 50,
         confidenceThreshold: 0.9,
-        defaultModel: { provider: 'anthropic', modelId: 'anthropic/claude-sonnet-4' },
+        defaultModel: { provider: 'anthropic', modelId: 'claude-sonnet-4-6' },
       },
       skillLoader,
       undefined,

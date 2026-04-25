@@ -183,6 +183,58 @@ export class MeetingService {
   }
 
   /**
+   * Create a placeholder meeting row for a scheduled bot. The
+   * MeetingBotRouter dispatch path uses this so we have a stable
+   * meetingId to pass to the provider before the bot has joined.
+   *
+   * Step 0 (meeting-bot abstraction).
+   */
+  async createScheduled(input: {
+    tenantId: string;
+    title: string;
+    meetingUrl: string;
+    source?: string;
+    scheduledStart?: string;
+  }) {
+    if (!this.prisma) {
+      throw new AppError(
+        'MeetingService.createScheduled requires prisma client',
+        500,
+        'INTERNAL',
+      );
+    }
+    const startTime = input.scheduledStart ? new Date(input.scheduledStart) : new Date();
+    return this.prisma.meeting.create({
+      data: {
+        tenantId: input.tenantId,
+        title: input.title,
+        meetingUrl: input.meetingUrl,
+        startTime,
+        status: 'scheduled',
+        source: input.source ?? 'vexa',
+      },
+    });
+  }
+
+  /**
+   * Mark a scheduled meeting as failed and record the human-readable
+   * reason. Called when the bot dispatch round-trip throws.
+   */
+  async markFailed(meetingId: string, reason: string) {
+    if (!this.prisma) {
+      throw new AppError(
+        'MeetingService.markFailed requires prisma client',
+        500,
+        'INTERNAL',
+      );
+    }
+    return this.prisma.meeting.update({
+      where: { id: meetingId },
+      data: { status: 'failed', failureReason: reason },
+    });
+  }
+
+  /**
    * Handle meeting completion - queue BA Agent for transcript processing.
    */
   private async handleMeetingCompleted(

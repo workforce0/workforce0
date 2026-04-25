@@ -316,6 +316,31 @@ h2 {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+/* Step 0 — local-everything section. Mirrors .problem-grid layout
+   so a new visitor visually parses it as "another feature row". */
+.step-zero {
+  margin-top: 96px;
+}
+
+.step-zero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.step-zero-cta {
+  margin-top: 24px;
+}
+
+.step-zero code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -546,4 +571,66 @@ h2 {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* ----- Architecture figure (hero panel replacement) ----- */
+.architecture-figure {
+  margin: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(20, 28, 50, 0.65), rgba(10, 14, 28, 0.55));
+  box-shadow: 0 20px 60px rgba(5, 6, 11, 0.5), 0 0 0 1px rgba(78, 240, 255, 0.08) inset;
+}
+
+.architecture-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.architecture-figure figcaption {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  letter-spacing: 0.02em;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ----- Step-zero card list (used by .step-zero-grid) ----- */
+.step-zero {
+  margin-top: 80px;
+}
+
+.step-zero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.step-zero-grid .panel {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.step-zero-cta {
+  margin-top: 32px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .step-zero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----- Highlight the "Human Executive" agent card ----- */
+.agent-grid article.approval {
+  border: 1px solid rgba(78, 240, 255, 0.45);
+  background: linear-gradient(180deg, rgba(78, 240, 255, 0.08), rgba(20, 28, 50, 0.6));
 }

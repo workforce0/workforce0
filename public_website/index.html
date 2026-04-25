@@ -1,10 +1,17 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Workforce Platform</title>
-    <meta name="description" content="An AI workforce that turns meetings into shipped work. Live clarification, multi-model consensus, and human-approved execution." />
+    <title>Workforce0 — The AI workforce that turns meetings into shipped work</title>
+    <meta name="description" content="Self-hosted, BYOK AI workforce. Six specialized agents take meetings to PRD to code to QA to ship — supervised by humans, executed via your tools." />
+    <meta property="og:title" content="Workforce0 — AI workforce, supervised by humans" />
+    <meta property="og:description" content="Meeting → PRD → Review → Dev → QA → Ship → Memory. Self-hosted. BYOK." />
+    <meta property="og:image" content="architecture.jpg" />
+    <meta property="og:image:width" content="1600" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="architecture.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@500;700&display=swap" rel="stylesheet" />
@@ -16,113 +23,67 @@
 
     <header class="nav">
       <div class="brand">
-        <span class="logo">AW</span>
+        <span class="logo">W0</span>
         <div>
-          <strong>AI Workforce</strong>
-          <small>Meeting → Execution</small>
+          <strong>Workforce0</strong>
+          <small>Meeting → Ship</small>
         </div>
       </div>
       <nav class="nav-links">
-        <a href="#solution">Solution</a>
+        <a href="#cycle">The Cycle</a>
         <a href="#agents">Agents</a>
+        <a href="#step-zero">Step 0</a>
         <a href="#system">System</a>
-        <a href="#pricing">Pricing</a>
         <a href="#security">Security</a>
+        <a href="https://github.com/workforce0/workforce0">GitHub</a>
       </nav>
       <div class="nav-cta">
-        <button class="btn ghost">Request Deck</button>
-        <button class="btn primary">Book Demo</button>
+        <a class="btn ghost" href="https://docs.workforce0.com">Docs</a>
+        <a class="btn primary" href="https://github.com/workforce0/workforce0">Get Started</a>
       </div>
     </header>
 
     <main>
       <section class="hero" id="top">
         <div class="hero-copy" data-animate>
-          <p class="eyebrow">Executive Proposal</p>
+          <p class="eyebrow">Open source · Self-hosted · BYOK</p>
           <h1>
-            The AI workforce that turns every meeting into execution.
+            The AI workforce, supervised by humans.
           </h1>
           <p class="lead">
-            Active participation, multi-model consensus, and specialized agents transform discussions into approved deliverables.
-            Humans approve. AI executes.
+            Six specialized agents — Meeting Brain, BA, Architect/Supervisor, Dev, QA, Memory Optimizer — coordinated by a Chief of Staff that posts to Slack/WhatsApp/Teams. You approve, pause, or cancel by replying in the same thread. The web UI is audit-only. The cycle closes itself.
           </p>
           <div class="hero-actions">
-            <button class="btn primary">Book a Demo</button>
-            <button class="btn secondary">View Sample Output</button>
+            <a class="btn primary" href="https://github.com/workforce0/workforce0">Get Started on GitHub</a>
+            <a class="btn secondary" href="https://docs.workforce0.com/self-hosting/wizard/">Read the Setup Guide</a>
           </div>
           <div class="hero-metrics">
             <div>
-              <strong>35%</strong>
-              <span>productivity lift in pilots</span>
+              <strong>6</strong>
+              <span>specialized agents</span>
             </div>
             <div>
-              <strong>82%</strong>
-              <span>enterprise adoption planned</span>
+              <strong>3</strong>
+              <span>BYOK providers (Anthropic, OpenAI, Google)</span>
             </div>
             <div>
-              <strong>$80B</strong>
-              <span>agent market by 2030</span>
+              <strong>1</strong>
+              <span><code>docker compose up</code> to run it</span>
             </div>
           </div>
         </div>
         <div class="hero-panels" data-animate>
-          <div class="glass-card">
-            <div class="card-title">
-              <span>Live Meeting</span>
-              <span class="pill online">Listening</span>
-            </div>
-            <div class="chat">
-              <div class="bubble from-ai">
-                I heard dashboard for alerts. Clarifying:
-                <ul>
-                  <li>Which monitoring sources?</li>
-                  <li>Real-time vs historical?</li>
-                  <li>Primary users?</li>
-                </ul>
-              </div>
-              <div class="bubble from-user">
-                Hawkeye. Both real-time and historical. SRE team.
-              </div>
-              <div class="bubble from-ai">
-                Got it. For drill-down, filtered alerts or health summary?
-              </div>
-              <div class="bubble from-user">Filtered alerts + top recurring issues.</div>
-              <div class="tag">Spec captured · Agent deployment queued</div>
-            </div>
-          </div>
-          <div class="glass-card">
-            <div class="card-title">
-              <span>Approvals</span>
-              <span class="pill warning">3 pending</span>
-            </div>
-            <div class="approval-row">
-              <div>
-                <strong>PR #142</strong>
-                <p>Alert Drilldown component</p>
-              </div>
-              <div class="actions">
-                <button class="chip">View</button>
-                <button class="chip primary">Approve</button>
-              </div>
-            </div>
-            <div class="approval-row">
-              <div>
-                <strong>Design Doc</strong>
-                <p>Real-time architecture</p>
-              </div>
-              <div class="actions">
-                <button class="chip">Review</button>
-                <button class="chip">Request changes</button>
-              </div>
-            </div>
-          </div>
+          <figure class="architecture-figure">
+            <img src="architecture.jpg" alt="Workforce0 architecture: Meeting Brain feeds the BA Agent, who hands a PRD to the Architect/Supervisor; Dev Agent codes and pushes to GitHub; QA Agent reviews; Chief of Staff posts approvals to a Human Executive over Slack/WhatsApp/Teams; Memory Optimizer archives the cycle." loading="eager" width="1600" />
+            <figcaption>Cycle: Meeting → PRD → Review → Dev → QA → Ship → Memory</figcaption>
+          </figure>
         </div>
       </section>
 
       <section class="problem" id="problem" data-animate>
         <div class="section-head">
-          <h2>Meetings create intent, but execution breaks down</h2>
-          <p>Most teams spend more time translating decisions than delivering outcomes.</p>
+          <h2>Meetings create intent — but execution breaks down</h2>
+          <p>Most teams spend more time translating decisions into work than delivering outcomes.</p>
         </div>
         <div class="problem-grid">
           <div class="panel">
@@ -131,145 +92,195 @@
           </div>
           <div class="panel">
             <h3>Tool fragmentation</h3>
-            <p>Meetings, docs, and delivery live in separate silos without automation.</p>
+            <p>Meetings, docs, code, and delivery live in separate silos without automation.</p>
           </div>
           <div class="panel">
             <h3>Passive AI</h3>
-            <p>Transcription tools listen but never clarify or take action.</p>
+            <p>Most "AI tools" listen but never clarify, decide, or take action.</p>
           </div>
         </div>
       </section>
 
-      <section class="solution" id="solution">
+      <section class="cycle" id="cycle">
         <div class="section-head" data-animate>
-          <h2>One pipeline from signal to shipped work</h2>
-          <p>AI engages live, aligns consensus, and deploys a workforce of agents.</p>
+          <h2>The cycle: meeting to ship, on autopilot — with you in the loop</h2>
+          <p>Every step has a responsible agent. Every decision needs a human ack. Memory closes the loop.</p>
         </div>
         <div class="pipeline" data-animate>
           <div class="step">
             <span>01</span>
-            <h3>Listen + clarify</h3>
-            <p>AI joins Meet, asks smart questions, and writes live specs.</p>
+            <h3>Meeting</h3>
+            <p>Meeting Brain ingests transcripts (live capture or upload) and extracts requirements.</p>
           </div>
           <div class="step">
             <span>02</span>
-            <h3>Multi-model consensus</h3>
-            <p>Claude, GPT-4, and Gemini cross-validate decisions.</p>
+            <h3>PRD</h3>
+            <p>BA Agent drafts a PRD with acceptance criteria, risks, and open questions.</p>
           </div>
           <div class="step">
             <span>03</span>
-            <h3>Agent execution</h3>
-            <p>BA, Dev, Sales, Marketing agents produce deliverables.</p>
+            <h3>Review</h3>
+            <p>Architect/Supervisor critiques the PRD against tenant memory and prior decisions.</p>
           </div>
           <div class="step">
             <span>04</span>
-            <h3>Human approval</h3>
-            <p>Dashboards route risk to the right human at the right time.</p>
+            <h3>Dev</h3>
+            <p>Dev Agent implements, runs tests, and opens a PR on GitHub.</p>
+          </div>
+          <div class="step">
+            <span>05</span>
+            <h3>QA</h3>
+            <p>QA Agent reviews the diff for regressions, bugs, and policy violations.</p>
+          </div>
+          <div class="step">
+            <span>06</span>
+            <h3>Ship</h3>
+            <p>Chief of Staff posts an approval request to Slack/WhatsApp/Teams; you Approve, Pause, or Cancel by replying.</p>
+          </div>
+          <div class="step">
+            <span>07</span>
+            <h3>Memory</h3>
+            <p>Memory Optimizer archives the completed cycle so the next one is smarter.</p>
           </div>
         </div>
       </section>
 
       <section class="agents" id="agents">
         <div class="section-head" data-animate>
-          <h2>Agents that ship real artifacts</h2>
-          <p>Each agent listens for its domain and delivers work inside your tools.</p>
+          <h2>The agents that ship the work</h2>
+          <p>Each agent has a single job and a clear handoff. Human Executive approves at every gate.</p>
         </div>
         <div class="agent-grid" data-animate>
           <article>
+            <h3>Meeting Brain</h3>
+            <p>Live capture, transcript ingestion, requirement extraction.</p>
+            <span>Vexa (BYO) · Whisper · Manual upload</span>
+          </article>
+          <article>
             <h3>BA Agent</h3>
-            <p>PRDs, user stories, acceptance criteria</p>
-            <span>Jira · Notion · Linear</span>
+            <p>Drafts PRDs with acceptance criteria, risks, and clarifying questions.</p>
+            <span>Multi-model critique · Memory-aware</span>
+          </article>
+          <article>
+            <h3>Architect / Supervisor</h3>
+            <p>Cross-checks the PRD against tenant decisions and architectural standards.</p>
+            <span>AI Council · Loop-guarded</span>
           </article>
           <article>
             <h3>Dev Agent</h3>
-            <p>Design docs, code PRs, tests</p>
-            <span>GitHub · VS Code · Docker</span>
+            <p>Implements features, writes tests, opens PRs.</p>
+            <span>GitHub · Local CLI · Sandbox</span>
           </article>
           <article>
-            <h3>Sales Agent</h3>
-            <p>Decks, outreach, CRM updates</p>
-            <span>Salesforce · HubSpot · Gmail</span>
+            <h3>QA Agent</h3>
+            <p>Reviews diffs for regressions, bugs, and policy violations.</p>
+            <span>Explicit-CoT reviewer (e.g. o3)</span>
           </article>
           <article>
-            <h3>Marketing Agent</h3>
-            <p>Positioning, launch content, landing pages</p>
-            <span>WordPress · Buffer · Figma</span>
+            <h3>Chief of Staff</h3>
+            <p>Comms hub. Routes approvals, status, and exceptions to the right human.</p>
+            <span>Slack · WhatsApp · Teams</span>
           </article>
+          <article>
+            <h3>Memory Optimizer</h3>
+            <p>Archives completed work so future cycles inherit context.</p>
+            <span>Per-tenant memory · Embeddings</span>
+          </article>
+          <article class="approval">
+            <h3>Human Executive</h3>
+            <p>You. Approve, Pause, or Cancel by replying. Web UI is audit-only.</p>
+            <span>Always in the loop</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="step-zero" id="step-zero" data-animate>
+        <div class="section-head">
+          <h2>Step 0 — Runs on your laptop</h2>
+          <p>One <code>docker compose up</code> starts local LLMs and local transcription. Live meeting capture is BYO — point at your own self-hosted Vexa endpoint, or skip live capture and upload recordings manually. BYOK keys (Anthropic, OpenAI, Google) work alongside as fallbacks.</p>
+        </div>
+        <div class="step-zero-grid">
+          <div class="panel">
+            <h3>Local LLMs</h3>
+            <p>Ollama + Qwen 3.5 (8B/32B) and Mistral Small 3 (24B). Pick a tier in the wizard; it reads your hardware.</p>
+          </div>
+          <div class="panel">
+            <h3>Local STT</h3>
+            <p>faster-whisper-server — meeting transcripts never leave your network.</p>
+          </div>
+          <div class="panel">
+            <h3>Self-hosted Vexa endpoint</h3>
+            <p>Apache 2.0 meeting bot — joins Google Meet/Zoom/Teams. Run Vexa yourself and point <code>VEXA_API_URL</code> at it; audio stays on your infra.</p>
+          </div>
+        </div>
+        <div class="step-zero-cta">
+          <a href="https://github.com/workforce0/workforce0" class="btn primary">Get started →</a>
         </div>
       </section>
 
       <section class="system" id="system">
         <div class="section-head" data-animate>
-          <h2>System map: clarity, consensus, execution</h2>
-          <p>Detailed flows keep context intact across every layer.</p>
+          <h2>The AI Council: three providers, deterministic fallback</h2>
+          <p>Every agent role has a primary, optional reviewers, and a fallback chain ending in local Ollama. No single point of failure.</p>
         </div>
         <div class="system-grid" data-animate>
           <div class="stack">
             <div class="stack-row">
-              <span class="stack-title">Meeting Layer</span>
+              <span class="stack-title">Reasoning (flagship)</span>
               <div class="stack-cards">
-                <div>Audio Capture</div>
-                <div>Transcription</div>
-                <div>Speaker Signals</div>
+                <div>Claude Opus 4.7</div>
+                <div>Gemini 3.1 Pro</div>
+                <div>GPT-5.5</div>
               </div>
             </div>
             <div class="stack-row">
-              <span class="stack-title">Understanding Layer</span>
+              <span class="stack-title">Explicit chain-of-thought</span>
               <div class="stack-cards">
-                <div>Context Extraction</div>
-                <div>Ambiguity Detection</div>
-                <div>Spec Generation</div>
+                <div>OpenAI o3 (or o3-pro opt-in)</div>
               </div>
             </div>
             <div class="stack-row">
-              <span class="stack-title">Orchestration Layer</span>
+              <span class="stack-title">Execution</span>
               <div class="stack-cards">
-                <div>Task Router</div>
-                <div>Model Selector</div>
-                <div>Consensus Engine</div>
+                <div>Claude Sonnet 4.6</div>
+                <div>Gemini 3.1 Pro</div>
+                <div>GPT-5.4</div>
               </div>
             </div>
             <div class="stack-row">
-              <span class="stack-title">Agent Layer</span>
+              <span class="stack-title">Extraction (fast/cheap)</span>
               <div class="stack-cards">
-                <div>BA Agent</div>
-                <div>Tech Agent</div>
-                <div>Sales Agent</div>
-                <div>Marketing Agent</div>
+                <div>Claude Haiku 4.5</div>
+                <div>Gemini 3.1 Flash</div>
+                <div>GPT-5 Nano</div>
               </div>
             </div>
             <div class="stack-row">
-              <span class="stack-title">Execution Layer</span>
+              <span class="stack-title">Local fallback (always available)</span>
               <div class="stack-cards">
-                <div>GitHub</div>
-                <div>Jira</div>
-                <div>Salesforce</div>
-                <div>Workspace</div>
+                <div>Qwen 3.5 (8B/32B)</div>
+                <div>Mistral Small 3 (24B)</div>
+                <div>Qwen 3.5 Coder (32B)</div>
               </div>
             </div>
           </div>
 
           <div class="consensus">
-            <h3>Consensus loop</h3>
+            <h3>Loop-guarded critique</h3>
             <div class="consensus-row">
-              <div class="consensus-card">Claude → Wosecopt + React Query</div>
-              <div class="consensus-card">Gemini → SSE + Zustand</div>
-              <div class="consensus-card">GPT‑4 → Wosecopt + Redux</div>
+              <div class="consensus-card">Primary drafts</div>
+              <div class="consensus-card">Reviewers critique in parallel</div>
+              <div class="consensus-card">Primary revises if confidence &lt; threshold</div>
             </div>
             <div class="consensus-debate">
-              <p>Debate Phase</p>
-              <div>
-                <span>Claude → Gemini:</span> Why SSE? Need bidirectional updates.
-              </div>
-              <div>
-                <span>Gemini → Claude:</span> What’s the update frequency?
-              </div>
-              <div>
-                <span>GPT‑4 → Both:</span> What’s the data volume?
-              </div>
+              <p>Termination guards</p>
+              <div><span>maxReviewRounds:</span> hard cap on revise→critique cycles</div>
+              <div><span>confidenceThreshold:</span> early exit when reviewer confidence is high</div>
+              <div><span>maxSteps:</span> global cap across all rounds</div>
+              <div><span>parallel reviewers:</span> no serial chaining, no compounding latency</div>
             </div>
             <div class="consensus-final">
-              Final: Wosecopt + React Query <span>3/3 agreed</span>
+              Every session emits <code>council.session_complete</code> telemetry <span>tunable, observable</span>
             </div>
           </div>
         </div>
@@ -277,80 +288,45 @@
 
       <section class="security" id="security" data-animate>
         <div class="section-head">
-          <h2>Security and consent built in</h2>
-          <p>Multi-model checks, consent-aware capture, and audit-ready outputs.</p>
+          <h2>Self-hosted by default. Your keys, your data, your call.</h2>
+          <p>BYOK across Anthropic, OpenAI, and Google. Local fallback ensures the cycle survives any single provider outage.</p>
         </div>
         <div class="security-grid">
           <div>
-            <h3>Consent-first capture</h3>
-            <p>Jurisdiction-aware consent and immediate pause on objections.</p>
+            <h3>BYOK, optional</h3>
+            <p>Add Anthropic / OpenAI / Google keys via the wizard. None required if you only want local models.</p>
           </div>
           <div>
-            <h3>Confidence handoffs</h3>
-            <p>Risk-based approvals prevent agent drift without blocking flow.</p>
+            <h3>Air-gapped tier</h3>
+            <p>Step 0 runs entirely on your hardware. No external AI service required for a working install.</p>
           </div>
           <div>
-            <h3>Residency controls</h3>
-            <p>EU/UK/APAC routing, strict retention, and audit trails.</p>
+            <h3>Audit-ready</h3>
+            <p>Every council session, every approval, every code change is logged with structured telemetry.</p>
           </div>
         </div>
-      </section>
-
-      <section class="pricing" id="pricing">
-        <div class="section-head" data-animate>
-          <h2>Pricing that scales with value</h2>
-        </div>
-        <div class="pricing-grid" data-animate>
-          <div class="price-card">
-            <h3>Starter</h3>
-            <p class="price">$500<span>/mo</span></p>
-            <ul>
-              <li>2 agents</li>
-              <li>50 meetings per month</li>
-              <li>Basic integrations</li>
-            </ul>
-          </div>
-          <div class="price-card featured">
-            <h3>Growth</h3>
-            <p class="price">$2,000<span>/mo</span></p>
-            <ul>
-              <li>5 agents</li>
-              <li>200 meetings per month</li>
-              <li>Full integrations</li>
-            </ul>
-          </div>
-          <div class="price-card">
-            <h3>Enterprise</h3>
-            <p class="price">Custom</p>
-            <ul>
-              <li>Unlimited agents</li>
-              <li>Unlimited meetings</li>
-              <li>Dedicated support</li>
-            </ul>
-          </div>
-        </div>
-        <p class="pricing-note" data-animate>Usage-based add-ons: LLM tokens at cost + 20%, meeting minutes $0.10/min, storage $0.05/GB beyond 100GB.</p>
       </section>
 
       <section class="cta" id="cta" data-animate>
-        <h2>Build the AI workforce with us</h2>
-        <p>Turn every meeting into deployed software and executed business actions.</p>
+        <h2>Run your own AI workforce.</h2>
+        <p>Apache 2.0. Self-hosted. <code>git clone</code>, <code>docker compose up</code>, walk the wizard.</p>
         <div class="hero-actions">
-          <button class="btn primary">Schedule a Demo</button>
-          <button class="btn ghost">Download Overview</button>
+          <a class="btn primary" href="https://github.com/workforce0/workforce0">Get Started on GitHub</a>
+          <a class="btn ghost" href="https://docs.workforce0.com">Read the Docs</a>
         </div>
       </section>
     </main>
 
     <footer class="footer">
       <div>
-        <strong>AI Workforce Platform</strong>
-        <p>AI workers supervised by humans.</p>
+        <strong>Workforce0</strong>
+        <p>The AI workforce, supervised by humans. Apache 2.0.</p>
       </div>
       <div class="footer-links">
         <a href="#top">Back to top</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#security">Security</a>
+        <a href="https://github.com/workforce0/workforce0">GitHub</a>
+        <a href="https://docs.workforce0.com">Docs</a>
+        <a href="https://github.com/workforce0/workforce0/issues">Issues</a>
       </div>
     </footer>
 

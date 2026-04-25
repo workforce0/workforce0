@@ -28,6 +28,46 @@ const envSchema = z.object({
   OPENAI_API_KEY: optionalString,  // For OpenAI critique in AI Council
   ANTHROPIC_API_KEY: optionalString,  // Reserved: Dev Agent Claude integration (Sprint 2)
 
+  // Local LLM (Ollama) — optional, enables on-prem inference for Council fallback
+  // and STT post-processing without leaving the host. When OLLAMA_BASE_URL is unset
+  // the service stays disabled and the AI Council skips it.
+  OLLAMA_BASE_URL: optionalString,
+  // How long Ollama should keep the model loaded after a request (Ollama default: 5m).
+  // Setting "30m" or "1h" reduces cold-load latency for bursty agent traffic.
+  OLLAMA_KEEP_ALIVE: optionalString,
+  // Cap concurrent loaded models on the Ollama server (defaults to 1 for memory safety).
+  OLLAMA_MAX_LOADED_MODELS: z.coerce.number().int().min(1).max(8).default(1),
+  // Default Ollama model emitted as an env hint by the Step 0 setup wizard
+  // (see backend/src/routes/setup-step0.routes.ts). Optional; used only as
+  // a hint surfaced back to the installer during BYOK config.
+  OLLAMA_DEFAULT_MODEL: optionalString,
+
+  // Local STT (Whisper) — optional, enables self-hosted transcription
+  WHISPER_BASE_URL: optionalString,
+  // Multiplier applied to the audio duration to compute Whisper request timeout
+  // (e.g. 2 = allow up to 2x audio length before timing out).
+  WHISPER_TIMEOUT_MULT: z.coerce.number().min(1).max(10).default(2),
+
+  // Provider chain for STT routing — comma-separated provider names, tried in order.
+  // "local,openai" prefers the on-prem Whisper service then falls back to OpenAI.
+  // Allowed providers: local, openai, deepgram. Kept as a string here (parsing
+  // is done in the DI container); refine() rejects typos at boot.
+  STT_PROVIDER_CHAIN: z
+    .string()
+    .optional()
+    .default('local,openai')
+    .refine(
+      (v) => {
+        const allowed = new Set(['local', 'openai', 'deepgram']);
+        const parts = v.split(',').map((s) => s.trim()).filter(Boolean);
+        return parts.length > 0 && parts.every((p) => allowed.has(p));
+      },
+      {
+        message:
+          'STT_PROVIDER_CHAIN must be a non-empty comma-separated list of: local, openai, deepgram',
+      },
+    ),
+
   // Webhook configuration
   WEBHOOK_BASE_URL: optionalUrl,  // Base URL for webhooks (e.g., ngrok tunnel)
 
@@ -40,6 +80,13 @@ const envSchema = z.object({
   JIRA_BASE_URL: optionalUrl,
 
   GCHAT_WEBHOOK_URL: optionalUrl,
+
+  // Meeting bot providers (Step 0 — meeting-bot abstraction)
+  // VEXA_API_URL points at the BYO Vexa endpoint (default
+  // http://vexa-api:18056 when running the bundled docker compose
+  // profile). When unset/unreachable, the router falls through to
+  // ManualProvider (upload-only).
+  VEXA_API_URL: optionalString,
 
   // Google Workspace
   GOOGLE_SERVICE_ACCOUNT_KEY: optionalString,  // JSON string of service account credentials

@@ -26,7 +26,7 @@ This guide will help you set up the Workforce0 MVP on your local machine.
 |---------|---------|---------|
 | **OpenAI API** | Voice bot (Realtime API) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | **Twilio** | Dial-in voice bot | [twilio.com/console](https://www.twilio.com/console) |
-| **Recall.ai** | Meeting transcription | [recall.ai](https://recall.ai/) |
+| **Vexa** (BYO) | Meeting bot (optional, self-hosted) | [Vexa-ai/vexa](https://github.com/Vexa-ai/vexa) — set `VEXA_API_URL` |
 | **Jira** | Ticket creation | [Atlassian API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
 | **Google Chat** | Notifications | Google Workspace Admin |
 
@@ -307,7 +307,7 @@ After setup is complete:
 
 1. **Explore the API**: Check `src/routes/` for available endpoints
 2. **Read the Architecture**: See `docs/ARCHITECTURE-RECOMMENDATION.md`
-3. **Configure Integrations**: Add Recall.ai, Jira, Google Chat keys to `.env`
+3. **Configure Integrations**: Add Jira, Google Chat keys to `.env`. For live meeting capture, set `VEXA_API_URL` if you self-host Vexa (see [meeting-bot docs](https://docs.workforce0.com/integrations/meeting-bot/))
 4. **Voice Bot**: Add Twilio + OpenAI keys, run ngrok, then POST to `/api/voice/dial-in`
 
 ---

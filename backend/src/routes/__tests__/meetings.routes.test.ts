@@ -2,7 +2,7 @@
  * Unit tests for Meetings Routes
  *
  * Tests:
- * - POST /: returns 410 (bot scheduling removed)
+ * - POST /: dispatches via meetingBotRouter (503 manual, 201 success, 502 failure)
  * - GET /: list meetings for tenant
  * - GET /:id: get meeting details (200, 404, tenant isolation)
  * - DELETE /:id: cancel meeting (200, 404, tenant isolation)
@@ -36,6 +36,23 @@ function createMockMeetingService() {
     getMeeting: vi.fn(),
     getMeetingsForTenant: vi.fn().mockResolvedValue([]),
     handleStatusUpdate: vi.fn(),
+    createScheduled: vi.fn(),
+    markFailed: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createMockMeetingBotRouter(providerId: 'vexa' | 'manual' = 'manual') {
+  const provider = {
+    id: providerId,
+    displayName: providerId,
+    isAvailable: vi.fn().mockResolvedValue(true),
+    scheduleBot: vi.fn(),
+    cancelBot: vi.fn(),
+    getTranscript: vi.fn(),
+  };
+  return {
+    provider,
+    resolveProvider: vi.fn().mockResolvedValue(provider),
   };
 }
 
@@ -64,12 +81,14 @@ async function buildApp(
   meetingRepository: ReturnType<typeof createMockMeetingRepository>,
   tenantId: string,
   prisma?: ReturnType<typeof createMockPrisma>,
+  meetingBotRouter?: ReturnType<typeof createMockMeetingBotRouter>,
 ): Promise<FastifyInstance> {
   const app = Fastify();
   app.decorate('services', {
     meetingService,
     meetingRepository,
     prisma: prisma || createMockPrisma(),
+    meetingBotRouter: meetingBotRouter || createMockMeetingBotRouter('manual'),
   } as any);
 
   app.addHook('onRequest', async (request) => {
@@ -111,10 +130,11 @@ describe('Meetings Routes', () => {
   });
 
   // =========================================================================
-  // POST / (schedule meeting - removed)
+  // POST / (schedule meeting via MeetingBotRouter)
   // =========================================================================
   describe('POST / (schedule meeting)', () => {
-    it('returns 410 because bot scheduling has been removed', async () => {
+    it('returns 503 NO_BOT_PROVIDER when only the manual fallback is available', async () => {
+      // Default buildApp wires a manual-only router.
       const res = await app.inject({
         method: 'POST',
         url: '/',
@@ -124,10 +144,80 @@ describe('Meetings Routes', () => {
         },
       });
 
-      expect(res.statusCode).toBe(410);
+      expect(res.statusCode).toBe(503);
       const body = res.json();
       expect(body.success).toBe(false);
-      expect(body.error.code).toBe('FEATURE_REMOVED');
+      expect(body.error.code).toBe('NO_BOT_PROVIDER');
+      expect(mockMeetingService.createScheduled).not.toHaveBeenCalled();
+    });
+
+    it('dispatches to the resolved provider and returns 201 with provider id', async () => {
+      const router = createMockMeetingBotRouter('vexa');
+      router.provider.scheduleBot.mockResolvedValue({
+        botId: 'bot-xyz',
+        status: 'scheduled',
+        estimatedJoinTime: '2026-04-25T10:00:00Z',
+      });
+      mockMeetingService.createScheduled.mockResolvedValue({
+        id: 'meeting-new',
+        tenantId: TENANT_A,
+      });
+
+      app = await buildApp(mockMeetingService, mockMeetingRepository, TENANT_A, mockPrisma, router);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/',
+        payload: {
+          meetingUrl: 'https://meet.google.com/xyz-abcd-efg',
+          title: 'Team Standup',
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.botId).toBe('bot-xyz');
+      expect(body.data.provider).toBe('vexa');
+      expect(body.data.meetingId).toBe('meeting-new');
+      expect(mockMeetingService.createScheduled).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: TENANT_A,
+          meetingUrl: 'https://meet.google.com/xyz-abcd-efg',
+        }),
+      );
+      expect(router.provider.scheduleBot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meetingId: 'meeting-new',
+          meetingUrl: 'https://meet.google.com/xyz-abcd-efg',
+          tenantId: TENANT_A,
+        }),
+      );
+    });
+
+    it('returns 502 BOT_SCHEDULE_FAILED and marks meeting failed when provider throws', async () => {
+      const router = createMockMeetingBotRouter('vexa');
+      router.provider.scheduleBot.mockRejectedValue(new Error('upstream is down'));
+      mockMeetingService.createScheduled.mockResolvedValue({
+        id: 'meeting-bad',
+        tenantId: TENANT_A,
+      });
+
+      app = await buildApp(mockMeetingService, mockMeetingRepository, TENANT_A, mockPrisma, router);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/',
+        payload: {
+          meetingUrl: 'https://meet.google.com/xyz-abcd-efg',
+        },
+      });
+
+      expect(res.statusCode).toBe(502);
+      const body = res.json();
+      expect(body.error.code).toBe('BOT_SCHEDULE_FAILED');
+      expect(body.error.message).toContain('upstream is down');
+      expect(mockMeetingService.markFailed).toHaveBeenCalledWith('meeting-bad', 'upstream is down');
     });
   });
 

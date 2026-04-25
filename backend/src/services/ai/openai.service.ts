@@ -92,8 +92,8 @@ export class OpenAIService {
   private readonly enabled: boolean;
   private readonly logger = createChildLogger({ service: 'OpenAIService' });
 
-  /** Model for critique (o1 series for reasoning) */
-  private static readonly CRITIQUE_MODEL = 'gpt-4o';  // Use gpt-4o until o1 is available
+  /** Model for critique (o3 series for reasoning) */
+  private static readonly CRITIQUE_MODEL = 'gpt-5.5';
 
   /** API base URL */
   private static readonly BASE_URL = 'https://api.openai.com/v1';

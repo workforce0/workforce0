@@ -112,12 +112,72 @@ services:
     networks:
       - workforce0
 
+  # ---------------------------------------------------------------------------
+  # Ollama (local LLM, opt-in via COMPOSE_PROFILES=local-llm)
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:0.21.2
+    container_name: workforce0-ollama
+    restart: unless-stopped
+    profiles: ["local-llm"]
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+    volumes:
+      - ollama_cache:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - workforce0
+
+  # ---------------------------------------------------------------------------
+  # Whisper STT (faster-whisper-server, opt-in via COMPOSE_PROFILES=local-stt)
+  # ---------------------------------------------------------------------------
+  # Pinned to 0.5.0-cpu (last stable semver tag on Docker Hub as of 2026-04;
+  # newer tags are 0.6.0-rc.* release candidates). Upstream project was renamed
+  # to `speaches-ai/speaches`; the `fedirz/faster-whisper-server` image is the
+  # frozen pre-rename build. Tag list:
+  # https://hub.docker.com/r/fedirz/faster-whisper-server/tags
+  #
+  # Env vars use Pydantic's `env_nested_delimiter="__"` (double underscore)
+  # for nested settings on the WhisperConfig model. Single underscores are
+  # silently ignored. Source:
+  # https://github.com/fedirz/faster-whisper-server/blob/v0.5.0/src/faster_whisper_server/config.py
+  whisper:
+    image: fedirz/faster-whisper-server:0.5.0-cpu
+    container_name: workforce0-whisper
+    restart: unless-stopped
+    profiles: ["local-stt"]
+    environment:
+      WHISPER__MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}
+      WHISPER__INFERENCE_DEVICE: ${WHISPER_INFERENCE_DEVICE:-auto}
+      WHISPER__COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      PRELOAD_MODELS: '["${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}"]'
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    networks:
+      - workforce0
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
   backend_uploads:
+    driver: local
+  ollama_cache:
+    driver: local
+  whisper_cache:
     driver: local
 
 networks:

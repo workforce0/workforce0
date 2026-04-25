@@ -69,6 +69,7 @@ import { MeetingService } from '../services/meeting/meeting.service.js';
 import { BAAgentService } from '../services/agent/ba-agent.service.js';
 import { GeminiService } from '../services/ai/gemini.service.js';
 import { OpenAIService } from '../services/ai/openai.service.js';
+import { OllamaService } from '../services/ai/ollama.service.js';
 import { AICouncil } from '../services/ai/ai-council.js';
 import { JiraService } from '../services/integrations/jira.service.js';
 import { LinearService } from '../services/integrations/linear.service.js';
@@ -117,6 +118,7 @@ import { HonchoMemoryProvider } from '../services/memory/honcho-memory-provider.
 import { ArchitectService } from '../services/agent/architect.service.js';
 import { LiveCaptureService } from '../services/meeting/live-capture.service.js';
 import { ModelRegistryService } from '../services/model-registry/model-registry.service.js';
+import { HardwareDetectService } from '../services/wizard/hardware-detect.service.js';
 
 /**
  * Build the MemoryManager with the always-on builtin provider + optional
@@ -218,6 +220,14 @@ import { EscalationService } from '../services/escalation/escalation.service.js'
 import { TranscriptionService } from '../services/transcription/transcription.service.js';
 import { DomainPromptBuilder } from '../services/transcription/domain-prompt.js';
 
+// STT (provider-agnostic speech-to-text — routes to local Whisper / OpenAI / …)
+import {
+  STTProviderRouter,
+  LocalWhisperProvider,
+  OpenAIWhisperProvider,
+  type STTProviderId,
+} from '../services/stt/index.js';
+
 // Google OAuth (per-user Google Meet integration)
 import { GoogleOAuthService } from '../services/integrations/google-oauth.service.js';
 
@@ -227,6 +237,13 @@ import { SSEService } from '../services/sse/sse.service.js';
 // AgentHub (WebSocket agent connections)
 import { AgentJobQueue } from '../services/agent-hub/job-queue.js';
 import { AgentHub } from '../services/agent-hub/agent-hub.service.js';
+
+// Meeting bot abstraction (Step 0 — §6 + §7)
+import {
+  MeetingBotRouter,
+  ManualProvider,
+  VexaProvider,
+} from '../services/meeting-bot/index.js';
 
 /**
  * Interface defining all available services.
@@ -256,6 +273,9 @@ export interface Services {
   // AI services
   geminiService: GeminiService;
   openaiService: OpenAIService;
+  /** Local LLM provider (Ollama). Stays disabled when OLLAMA_BASE_URL is
+   *  unset; the AI Council fallback chain skips it via isAvailable(). */
+  ollamaService: OllamaService;
   aiCouncil: AICouncil;
 
   // Integration services
@@ -379,7 +399,11 @@ export interface Services {
 
   // Meeting ingestion services
   storageService: StorageService;                   // Local filesystem by default; S3 when AWS_S3_BUCKET set
-  transcriptionService: TranscriptionService | null; // null if OpenAI key not set
+  transcriptionService: TranscriptionService | null; // null if no STT provider is configured (no OpenAI key + no local Whisper)
+  /** Provider-agnostic STT router (Plan 2). Wraps local Whisper + OpenAI
+   *  Whisper. Always set, even when no providers are configured — the
+   *  wizard's status indicator polls this in Plan 3. */
+  sttRouter: STTProviderRouter;
   /** PG.7: builds domain-aware Whisper prompts from tenant corpus
    *  (god nodes + skills + recent PRD titles). Credit:
    *  safishamsi/graphify. */
@@ -389,6 +413,18 @@ export interface Services {
   // AgentHub (WebSocket agent connections + job queue)
   agentJobQueue: AgentJobQueue;
   agentHub: AgentHub;
+
+  // Meeting bot router (live-capture provider abstraction —
+  // resolves vexa | manual per tenant at request time).
+  meetingBotRouter: MeetingBotRouter;
+
+  /** Validated env-derived config — exposed so routes (e.g.
+   *  /api/integrations/status) can probe feature URLs without
+   *  re-importing the config module. */
+  config: typeof config;
+
+  /** Step 0 wizard: detects host RAM/CPU and recommends a local-LLM tier. */
+  hardwareDetectService: HardwareDetectService;
 }
 
 /**
@@ -521,6 +557,25 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   // ==========================================================================
   const geminiService = new GeminiService(config.GEMINI_API_KEY);
   const openaiService = new OpenAIService(config.OPENAI_API_KEY);
+
+  // Local LLM provider (Ollama). Disabled until OLLAMA_BASE_URL is set
+  // (the `local-llm` Compose profile defaults it to http://ollama:11434).
+  // Plan 2: pre-warms the small extraction tier so the first real call
+  // doesn't pay cold-load latency. warmModel() logs and swallows when no
+  // model is pulled yet, so this is safe on a fresh install.
+  const ollamaService = new OllamaService({
+    baseUrl: config.OLLAMA_BASE_URL,
+    keepAlive: config.OLLAMA_KEEP_ALIVE,
+  });
+  if (ollamaService.isEnabled()) {
+    void ollamaService.warmModel('qwen3.5:8b');
+    logger.info('OllamaService enabled (warming qwen3.5:8b)', {
+      baseUrl: config.OLLAMA_BASE_URL,
+    });
+  } else {
+    logger.warn('OllamaService disabled (no OLLAMA_BASE_URL set)');
+  }
+
   const aiCouncil = new AICouncil(geminiService, openaiService);
 
   const jiraService = new JiraService({
@@ -877,14 +932,43 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   });
   logger.info('Storage service initialized', { driver: storageService.driver });
 
-  const transcriptionService = config.OPENAI_API_KEY
-    ? new TranscriptionService(config.OPENAI_API_KEY)
+  // STTProviderRouter (Plan 2): owns the local-Whisper → OpenAI chain.
+  // Each provider stays disabled until its config is set (URL/api key),
+  // so wiring the router unconditionally is safe — `isAvailable()` per
+  // provider gates real calls.
+  const sttChain = config.STT_PROVIDER_CHAIN
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0) as STTProviderId[];
+  const sttRouter = new STTProviderRouter(
+    [
+      new LocalWhisperProvider({
+        baseUrl: config.WHISPER_BASE_URL,
+        timeoutMult: config.WHISPER_TIMEOUT_MULT,
+      }),
+      new OpenAIWhisperProvider({ apiKey: config.OPENAI_API_KEY }),
+    ],
+    sttChain,
+  );
+  logger.info('STTProviderRouter initialized', {
+    chain: sttChain,
+    localWhisperConfigured: !!config.WHISPER_BASE_URL,
+    openaiConfigured: !!config.OPENAI_API_KEY,
+  });
+
+  // TranscriptionService keeps the chunking/merge pipeline; per-chunk
+  // single-shot calls now go through the router. The legacy direct path
+  // is preserved for the no-key + no-router case (router is always wired,
+  // so the legacy path in practice is only used by tests).
+  const sttConfigured = !!config.OPENAI_API_KEY || !!config.WHISPER_BASE_URL;
+  const transcriptionService = sttConfigured
+    ? new TranscriptionService(config.OPENAI_API_KEY ?? '', sttRouter)
     : null;
 
   if (!transcriptionService) {
-    logger.warn('TranscriptionService disabled (no OPENAI_API_KEY configured)');
+    logger.warn('TranscriptionService disabled (no STT provider configured: set OPENAI_API_KEY or WHISPER_BASE_URL)');
   } else {
-    logger.info('TranscriptionService enabled (Whisper API)');
+    logger.info('TranscriptionService enabled (delegates to STTProviderRouter)');
   }
 
   const googleOAuthService = (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET)
@@ -1074,6 +1158,38 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   const skillRankingService = new SkillRankingService(rlsPrisma);
 
   // ==========================================================================
+  // STEP 6.96: Meeting bot router (live-capture provider abstraction)
+  // ==========================================================================
+  // Build providers; isAvailable() is checked at request time, so even
+  // with no Vexa stack the router routes around unavailable providers
+  // and falls through to the always-available ManualProvider.
+  const manualProvider = new ManualProvider();
+  const vexaProvider = new VexaProvider({
+    baseUrl: config.VEXA_API_URL ?? 'http://vexa-api:18056',
+  });
+
+  // Tenant settings adapter — wraps the prisma model in the shape
+  // MeetingBotRouter expects. Inline adapter avoids a premature
+  // TenantSettingsService extraction.
+  const tenantSettingsAdapter = {
+    get: async (tenantId: string) => {
+      const row = await (rlsPrisma as any).tenantSettings.findUnique({ where: { tenantId } });
+      return {
+        meetingBotProviderId: (row?.meetingBotProviderId ?? null) as
+          | 'vexa'
+          | 'manual'
+          | null,
+      };
+    },
+  };
+
+  const meetingBotRouter = new MeetingBotRouter(
+    [vexaProvider, manualProvider],
+    tenantSettingsAdapter,
+  );
+  logger.info('MeetingBotRouter initialized with vexa/manual providers');
+
+  // ==========================================================================
   // STEP 7: Register all services on Fastify instance
   // ==========================================================================
   const services: Services = {
@@ -1086,6 +1202,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     baAgentService,
     geminiService,
     openaiService,
+    ollamaService,
     aiCouncil,
     jiraService,
     googleChatService,
@@ -1144,6 +1261,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     sseService,
     storageService,
     transcriptionService,
+    sttRouter,
     domainPromptBuilder: new DomainPromptBuilder({
       prisma: rlsPrisma,
       projectGraphService,
@@ -1151,6 +1269,9 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     googleOAuthService,
     agentJobQueue,
     agentHub,
+    meetingBotRouter,
+    config,
+    hardwareDetectService: new HardwareDetectService(),
   };
 
   // Decorate Fastify instance with services
