@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/sidebar";
 import { AgentJobNotifier } from "@/components/agent-job-notifier";
 import { ProjectProvider } from "@/lib/project-context";
 import { BrandMark } from "@/components/brand-mark";
+import { Step0MigrationBanner } from "@/components/step0-migration-banner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -62,6 +63,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </svg>
           </button>
           <span className="ml-3 text-[15px] font-bold text-ink tracking-tight">Workforce0</span>
+        </div>
+        {/* Plan 3 Step 0: top-of-app migration banner for existing tenants
+            who haven't yet seen the local-everything wizard. Renders null
+            once dismissed or migrated. */}
+        <div className="px-4 pt-4 lg:px-6 lg:pt-6">
+          <Step0MigrationBanner />
         </div>
         <div className="animate-fade-in">
           {children}
