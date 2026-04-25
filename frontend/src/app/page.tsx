@@ -38,6 +38,7 @@ import {
   Globe,
 } from "lucide-react";
 import { isAuthenticated } from "@/lib/auth";
+import { BrandMark } from "@/components/brand-mark";
 
 const GITHUB_REPO_URL = "https://github.com/workforce0/workforce0";
 
@@ -137,11 +138,7 @@ function TopNav() {
           className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded-md"
           aria-label="Workforce0 home"
         >
-          <span className="relative w-7 h-7 rounded-lg bg-gradient-to-br from-accent via-accent-active to-violet-500 grid place-items-center shadow-[0_0_24px_rgba(79,70,229,0.45)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </span>
+          <BrandMark size={28} className="shadow-[0_0_24px_rgba(124,58,237,0.45)]" />
           <span className="text-[14.5px] font-semibold tracking-tight">Workforce0</span>
         </Link>
 
@@ -568,7 +565,7 @@ function FeatureGrid() {
     {
       icon: <GitBranch className="w-5 h-5" aria-hidden />,
       title: "Project graph",
-      body: "Native AST extraction across TS, JS, Python. God-nodes feed the planner so decompositions target the parts of the repo that matter.",
+      body: "Full TS/JS AST plus a regex-based Python extractor (Go, Rust, Java on the way). God-nodes feed the planner so decompositions target the parts of the repo that matter.",
     },
     {
       icon: <ShieldCheck className="w-5 h-5" aria-hidden />,
@@ -850,11 +847,7 @@ function Footer() {
     <footer className="relative border-t border-border bg-canvas">
       <div className="max-w-6xl mx-auto px-5 lg:px-8 py-10 flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="relative w-6 h-6 rounded-md bg-gradient-to-br from-accent via-accent-active to-violet-500 grid place-items-center">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </span>
+          <BrandMark size={24} />
           <span className="text-[13px] text-ink-secondary">
             Workforce0 · <span className="text-ink-tertiary">MIT</span>
           </span>

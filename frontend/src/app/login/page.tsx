@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { api } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
 import { ArrowRight, Loader2, Shield } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 
 export default function LoginPage() {
   return (
@@ -103,11 +104,7 @@ function LoginForm() {
         />
 
         <div className="relative flex items-center gap-3 animate-fade-in">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent via-accent to-violet flex items-center justify-center glow">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
+          <BrandMark size={40} priority className="glow" />
           <span className="text-xl font-semibold tracking-tight font-display">Workforce0</span>
         </div>
 
@@ -152,11 +149,7 @@ function LoginForm() {
         <div className="w-full max-w-md animate-fade-in-up">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-8 justify-center">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-amber flex items-center justify-center shadow-[0_0_16px_rgba(194,113,12,0.2)]">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-            </div>
+            <BrandMark size={36} className="shadow-[0_0_16px_rgba(124,58,237,0.25)]" />
             <span className="text-xl font-bold text-ink">Workforce0</span>
           </div>
 

@@ -82,6 +82,23 @@ export class EngagementService {
   }
 
   /**
+   * Look up the most recent active engagement for a meeting (if any).
+   * Reused by the meeting processor to make MEETING_PROCESS idempotent
+   * — a retried job reuses the existing engagement instead of inserting
+   * a second active one. NOTE: this is a best-effort in-process check;
+   * two truly concurrent MEETING_PROCESS workers can still race past
+   * it. A unique index on `(tenantId, meetingId)` for active rows is
+   * the proper long-term fix and is tracked separately.
+   */
+  async findActiveByMeeting(tenantId: string, meetingId: string): Promise<{ id: string } | null> {
+    return this.prisma.engagement.findFirst({
+      where: { tenantId, meetingId, status: 'active' },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+  }
+
+  /**
    * Advance the engagement to the next phase.
    *
    * Rules:
@@ -200,13 +217,37 @@ export class EngagementService {
     switch (agentType) {
       case 'dev_agent': {
         const prdId = output?.prdId as string;
-        if (prdId) {
+        // The route that triggers PRD approval now mints a dev_agent
+        // ticket+AgentTask and passes their IDs through output (see
+        // routes/agents.routes.ts approve handler). Forward both to the
+        // DEV_AGENT_PROCESS handler so it doesn't fall back to
+        // `tix_legacy_<empty-taskId>` and fail downstream prisma updates.
+        // We coerce missing values to `undefined` (not `''`) because
+        // `??` only falls back on null/undefined — an empty string is
+        // falsy *and* non-nullish, so `'' ?? <fallback>` would still
+        // produce `''` and bypass the legacy-id fallback.
+        const taskId = (output?.taskId as string) || undefined;
+        const ticketId = (output?.ticketId as string) || undefined;
+        // The DEV_AGENT_PROCESS handler treats `taskId` as required (it
+        // updates `agentTask` rows by that id). Dispatching without one
+        // queues a job that will fail mid-flight in the processor, so
+        // we refuse to queue and log a skip instead. Callers that want
+        // dev work dispatched MUST mint a ticket+task first and pass
+        // both ids through `output` (see routes/agents.routes.ts and
+        // services/approval-fanout/approval-fanout.service.ts).
+        if (prdId && taskId) {
           await this.queueService.addJob('dev_agent_process', {
             prdId,
             engagementId,
             tenantId,
-            taskId: '', // Will be created by the processor
+            taskId,
+            ticketId,
           });
+        } else if (prdId) {
+          logger.warn(
+            { engagementId, phase, agentType, prdId },
+            'Skipping dev_agent dispatch: caller did not supply a taskId in output',
+          );
         }
         break;
       }

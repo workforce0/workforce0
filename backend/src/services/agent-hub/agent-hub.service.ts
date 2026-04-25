@@ -264,24 +264,68 @@ export class AgentHub {
 
             const task = await this.prisma.agentTask.findUnique({ where: { id: taskId } });
             if (task && msg.status === 'done') {
+              // engagement.advancePhase signature is (tenantId, engagementId, input).
+              // Earlier callers passed (task.meetingId, 'test'), which Prisma rejected
+              // with `prisma.engagement.findFirst({ where: { id: 'test' } })` — bridge
+              // ended up logging "Failed to bridge job result to Ticket/AgentTask"
+              // even though the user-visible state was already correct. Pull the real
+              // engagementId out of the AgentJob payload and the tenantId off the job
+              // record itself.
+              const engagementId =
+                (agentJob.payload as any)?.engagementId ||
+                (task as any).engagementId ||
+                null;
               if (task.agentType === 'dev_agent' && this.engagementService) {
-                try { await this.engagementService.advancePhase(task.meetingId, 'test'); } catch {}
+                if (engagementId) {
+                  try {
+                    await this.engagementService.advancePhase(agentJob.tenantId, engagementId, {
+                      targetPhase: 'test',
+                      confidence: 1.0,
+                      output: { prdId: (agentJob.payload as any)?.prdId },
+                    });
+                  } catch (err) {
+                    log.debug('advancePhase build→test failed (non-fatal)', { engagementId, error: (err as Error).message });
+                  }
+                }
                 await this.chainQAJob(agentJob);
               } else if (task.agentType === 'qa_agent' && this.engagementService) {
-                try { await this.engagementService.advancePhase(task.meetingId, 'ship'); } catch {}
+                if (engagementId) {
+                  try {
+                    await this.engagementService.advancePhase(agentJob.tenantId, engagementId, {
+                      targetPhase: 'ship',
+                      confidence: 1.0,
+                      output: { prdId: (agentJob.payload as any)?.prdId },
+                    });
+                  } catch (err) {
+                    log.debug('advancePhase test→ship failed (non-fatal)', { engagementId, error: (err as Error).message });
+                  }
+                }
               }
             }
 
-            if (this.commsRouter) {
-              this.commsRouter.notify(agentJob.tenantId, {
-                type: msg.status === 'done' ? 'agent.completed' : 'agent.failed',
-                taskId,
-                data: msg.data,
-              }).catch(() => {});
-            }
+            // CommunicationRouter exposes `send(SendMessageInput)`, not a
+            // generic `notify(tenantId, event)`. The intended pub/sub-style
+            // broadcast here is already covered by the SSE publish at the top
+            // of this handler (`agent_job.status_changed`), which the web UI
+            // and any external listener already consume. We removed the
+            // broken `commsRouter.notify(...)` call rather than retrofitting
+            // a fake message — chief-of-staff comms still happen through
+            // their own triggers (clarification requests, brief approvals)
+            // via the same router. See task #189.
           }
         } catch (err) {
-          log.error('Failed to bridge job result to Ticket/AgentTask', { jobId: msg.jobId, error: (err as Error).message });
+          // Pino's signature is (obj, msg) — the existing (msg, obj) usage
+          // across this file silently drops the data object, which is why
+          // earlier "Failed to bridge…" errors had no context. We log it
+          // the right way around here so the actual cause is visible.
+          log.error(
+            {
+              jobId: msg.jobId,
+              error: (err as Error).message,
+              stack: (err as Error).stack,
+            },
+            'Failed to bridge job result to Ticket/AgentTask',
+          );
         }
         break;
     }
@@ -426,6 +470,10 @@ export class AgentHub {
         action: 'review_pr',
         targetRepo: devJob.targetRepo,
         payload: {
+          // The daemon's executor reads payload.targetRepo to route the
+          // job to the right local checkout; without it the QA chain
+          // fails with `Unknown targetRepo: ""`.
+          targetRepo: devJob.targetRepo,
           branch: payload.branch,
           prdContent: payload.prdContent,
           prUrl: devJob.result?.prUrl,

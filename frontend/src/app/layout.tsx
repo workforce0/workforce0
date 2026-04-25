@@ -10,8 +10,39 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Workforce0 — AI Team Platform",
-  description: "Your AI team that turns meetings into action",
+  // metadataBase makes relative paths in `icons`/`openGraph.images`
+  // resolve to absolute URLs for crawlers (LinkedIn, Twitter, Slack
+  // unfurls). Without it, Next falls back to localhost:3000 in
+  // production builds and OG images break on every share. Override at
+  // build time with NEXT_PUBLIC_SITE_URL when deploying behind a
+  // different origin. We catch malformed values rather than throwing
+  // during module evaluation (which would break build/start).
+  metadataBase: (() => {
+    const fallback = "https://workforce0.com";
+    const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() || fallback;
+    try {
+      return new URL(raw);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.warn(`Invalid NEXT_PUBLIC_SITE_URL=${raw}; falling back to ${fallback}`);
+      return new URL(fallback);
+    }
+  })(),
+  title: "Workforce0 — AI workforce for product teams",
+  description: "Open-source, self-hosted AI workforce. Meetings in, shipped work out.",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icon-192.png",
+  },
+  openGraph: {
+    title: "Workforce0",
+    description: "Open-source, self-hosted AI workforce. Meetings in, shipped work out.",
+    images: [{ url: "/logo-full.png", width: 1610, height: 1440, alt: "Workforce0" }],
+  },
 };
 
 export default function RootLayout({

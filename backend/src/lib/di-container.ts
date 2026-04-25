@@ -968,6 +968,11 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     redis,
     communicationRouter,
     config.PUBLIC_URL ?? 'http://localhost:3001',
+    // Optional dispatch hooks so reply-to-approve fires the same dev
+    // pipeline the web-UI route does. See task #192.
+    engagementService as any,
+    ticketService as any,
+    queueService as any,
   );
 
   logger.info('CommunicationRouter initialized', {

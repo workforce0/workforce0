@@ -1,5 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Treat empty-string env vars as unset. `??` only falls back on
+// `undefined`/`null`, so `PLAYWRIGHT_BASE_URL=""` would otherwise
+// produce an empty baseURL and tests would silently target the empty
+// string.
+const envURL = process.env.PLAYWRIGHT_BASE_URL?.trim();
+const baseURL = envURL && envURL.length > 0 ? envURL : 'http://localhost:3001';
+const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEB_SERVER === '1';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -10,7 +18,7 @@ export default defineConfig({
   timeout: 30000,
 
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -22,10 +30,17 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3001',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  webServer: skipWebServer
+    ? undefined
+    : {
+        command: 'npm run dev',
+        // `npm run dev` always binds to 3001, so the readiness probe must
+        // hit 3001 too. Setting `url: baseURL` would break here when a
+        // caller overrides PLAYWRIGHT_BASE_URL without also setting
+        // PLAYWRIGHT_SKIP_WEB_SERVER — the probe would poll the wrong
+        // port and time out after 120s with a misleading error.
+        url: 'http://localhost:3001',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120000,
+      },
 });
