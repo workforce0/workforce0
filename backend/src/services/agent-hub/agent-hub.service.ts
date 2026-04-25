@@ -264,11 +264,42 @@ export class AgentHub {
 
             const task = await this.prisma.agentTask.findUnique({ where: { id: taskId } });
             if (task && msg.status === 'done') {
+              // engagement.advancePhase signature is (tenantId, engagementId, input).
+              // Earlier callers passed (task.meetingId, 'test'), which Prisma rejected
+              // with `prisma.engagement.findFirst({ where: { id: 'test' } })` — bridge
+              // ended up logging "Failed to bridge job result to Ticket/AgentTask"
+              // even though the user-visible state was already correct. Pull the real
+              // engagementId out of the AgentJob payload and the tenantId off the job
+              // record itself.
+              const engagementId =
+                (agentJob.payload as any)?.engagementId ||
+                (task as any).engagementId ||
+                null;
               if (task.agentType === 'dev_agent' && this.engagementService) {
-                try { await this.engagementService.advancePhase(task.meetingId, 'test'); } catch {}
+                if (engagementId) {
+                  try {
+                    await this.engagementService.advancePhase(agentJob.tenantId, engagementId, {
+                      targetPhase: 'test',
+                      confidence: 1.0,
+                      output: { prdId: (agentJob.payload as any)?.prdId },
+                    });
+                  } catch (err) {
+                    log.debug('advancePhase build→test failed (non-fatal)', { engagementId, error: (err as Error).message });
+                  }
+                }
                 await this.chainQAJob(agentJob);
               } else if (task.agentType === 'qa_agent' && this.engagementService) {
-                try { await this.engagementService.advancePhase(task.meetingId, 'ship'); } catch {}
+                if (engagementId) {
+                  try {
+                    await this.engagementService.advancePhase(agentJob.tenantId, engagementId, {
+                      targetPhase: 'ship',
+                      confidence: 1.0,
+                      output: { prdId: (agentJob.payload as any)?.prdId },
+                    });
+                  } catch (err) {
+                    log.debug('advancePhase test→ship failed (non-fatal)', { engagementId, error: (err as Error).message });
+                  }
+                }
               }
             }
 
