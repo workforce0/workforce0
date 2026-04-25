@@ -9,7 +9,7 @@
 
 ## Summary
 
-Make Workforce0 runnable end-to-end on a single laptop with one `docker compose up`, no external accounts required. Bundle local LLMs (Ollama + Qwen 3.5 / Mistral Small 3), local STT (Whisper Large V3 Turbo), and an opt-in local meeting bot (Vexa). Keep BYOK and Recall.ai as first-class alternatives. The first-run experience proves Workforce0's value before the user buys into the AI Council, hosted tier, or any external dependency.
+Make Workforce0 runnable end-to-end on a single laptop with one `docker compose up`, no external accounts required. Bundle local LLMs (Ollama + Qwen 3.5 / Mistral Small 3), local STT (Whisper Large V3 Turbo), and an opt-in local meeting bot (Vexa). The first-run experience proves Workforce0's value before the user buys into the AI Council, hosted tier, or any external dependency.
 
 This is **Step 0** — the simplest path to a working install. The AI Council, multi-tenant features, M8 verified decomposition, and the hosted tier come later (Step 1+) and must not require Step 0 users to migrate.
 
@@ -232,11 +232,13 @@ Only BA/QA/Supervisor have critique loops; all bounded ≤ 2.
 > works against any Vexa instance the user runs separately. See [issue #37](https://github.com/workforce0/workforce0/issues/37) for
 > the real bundling work.
 
-One interface, three implementations. All feed the same downstream pipeline (engagement creation, BA agent dispatch).
+One interface, two implementations. All feed the same downstream pipeline (engagement creation, BA agent dispatch).
+
+> **Status update (2026-04-25):** Recall.ai support was originally planned but removed during PR #38 review (2026-04-25) to reduce surface area; only Vexa (BYO) and Manual remain.
 
 ```ts
 // backend/src/services/meeting-bot/meeting-bot-provider.types.ts
-export type ProviderId = 'vexa' | 'recall' | 'manual';
+export type ProviderId = 'vexa' | 'manual';
 
 export interface MeetingBotProvider {
   readonly id: ProviderId;
@@ -257,10 +259,9 @@ export interface MeetingTranscript {
 }
 ```
 
-### Three concrete providers
+### Two concrete providers
 
 - **`VexaProvider`** — talks to bundled `vexa-api:18056`. Polls `/bots/:id/transcript`. No webhook.
-- **`RecallProvider`** — talks to `https://api.recall.ai` with `RECALL_API_KEY`. Webhook at `/webhooks/meeting-bot/recall`, HMAC-verified via `RECALL_WEBHOOK_SECRET`.
 - **`ManualProvider`** — `scheduleBot` throws `ProviderNotSchedulableError`. Always-available terminal fallback.
 
 ### Routing
@@ -268,7 +269,7 @@ export interface MeetingTranscript {
 ```ts
 // backend/src/services/meeting-bot/meeting-bot-router.service.ts
 class MeetingBotRouter {
-  private fallbackOrder: ProviderId[] = ['vexa', 'recall', 'manual'];
+  private fallbackOrder: ProviderId[] = ['vexa', 'manual'];
 
   async resolveProvider(tenantId: string): Promise<MeetingBotProvider> {
     const tenant = await this.tenantSettings.get(tenantId);
@@ -291,12 +292,11 @@ backend/src/services/meeting-bot/
 ├── meeting-bot-router.service.ts
 ├── providers/
 │   ├── vexa.provider.ts
-│   ├── recall.provider.ts
 │   └── manual.provider.ts
 └── index.ts
 ```
 
-DI container wires the router into existing `/api/meetings/schedule` and bot-event handler routes; direct-Recall code paths get *replaced* (not paralleled) by `RecallProvider`.
+DI container wires the router into the existing `/api/meetings/schedule` route.
 
 ## §7 — Local meeting bot bundle
 
@@ -379,7 +379,7 @@ Default `MAX_CONCURRENT_BOTS=2`. Fits the 16 GB Mac target alongside LLM bundle 
 
 | Failure | What user sees |
 |---|---|
-| Containers won't start | Wizard: "Vexa failed to start. [Logs] [Retry] [Switch to Recall] [Skip]" |
+| Containers won't start | Wizard: "Vexa failed to start. [Logs] [Retry] [Skip]" |
 | Bot can't join meeting | Slack notification: "Couldn't join the meeting. Upload recording instead?" |
 | Disk fills with old containers | Cleanup cron in vexa-bot-manager (1h); silent |
 | Postgres connection drops | Same as "won't start" path |
@@ -512,18 +512,20 @@ If Local is on: `local-llm` and `local-stt` are added to `COMPOSE_PROFILES`.
 
 ### Step 4 — Meeting capture
 
-Three cards, one selected:
+Two cards, one selected:
 
 ```
-┌─ Bundled (recommended) ─┐  ┌─ Recall.ai ────────────┐  ┌─ Skip ─────────┐
-│ ✓ No external account   │  │ ✓ Most reliable joins  │  │ Manual upload   │
-│ ✓ Apache 2.0, runs here │  │ ✓ Vendor-managed       │  │ only            │
-│ ⚠ Adds ~310 MB RAM      │  │ ⚠ Costs ~$0.50/hour    │  │ Always works.   │
-│   Powered by Vexa       │  │ ⚠ Audio leaves network │  │                 │
-└─────────────────────────┘  └────────────────────────┘  └─────────────────┘
+┌─ Bundled (recommended) ─┐  ┌─ Skip ─────────┐
+│ ✓ No external account   │  │ Manual upload   │
+│ ✓ Apache 2.0, runs here │  │ only            │
+│ ⚠ Adds ~310 MB RAM      │  │ Always works.   │
+│   Powered by Vexa       │  │                 │
+└─────────────────────────┘  └─────────────────┘
 ```
 
-Bundled adds `meeting-bot` profile. Recall reveals API-key field. Skip writes nothing.
+Bundled adds `meeting-bot` profile. Skip writes nothing.
+
+> **Note (2026-04-25):** Recall.ai support was originally planned but removed during PR #38 review (2026-04-25) to reduce surface area; only Vexa (BYO) and Manual remain.
 
 ### Step 6 — Done + apply
 
@@ -751,7 +753,7 @@ backend/src/services/
 ├── meeting-bot/                  NEW
 │   ├── meeting-bot-provider.types.ts
 │   ├── meeting-bot-router.service.ts
-│   └── providers/{vexa,recall,manual}.provider.ts
+│   └── providers/{vexa,manual}.provider.ts
 ├── stt/                          NEW
 │   ├── stt-provider.types.ts
 │   ├── stt-router.service.ts

@@ -3,7 +3,7 @@
  *
  * Resolution order:
  *   1. Tenant's preferred provider (if registered AND available)
- *   2. Default fallback order: vexa → recall → manual
+ *   2. Default fallback order: vexa → manual
  *   3. Manual (always available, terminal fallback)
  *
  * @module services/meeting-bot/meeting-bot-router.service
@@ -18,7 +18,7 @@ interface TenantSettingsLike {
   get(tenantId: string): Promise<{ meetingBotProviderId: ProviderId | null }>;
 }
 
-const DEFAULT_ORDER: ProviderId[] = ['vexa', 'recall', 'manual'];
+const DEFAULT_ORDER: ProviderId[] = ['vexa', 'manual'];
 
 export class MeetingBotRouter {
   private readonly providers: Map<ProviderId, MeetingBotProvider>;

@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent } from "@/components/ui/card";
 
-export type MeetingBotChoice = "vexa" | "recall" | "skip";
+export type MeetingBotChoice = "vexa" | "skip";
 
 const CHOICES: { id: MeetingBotChoice; label: string; pros: string[]; cons: string[] }[] = [
   {
@@ -9,12 +9,6 @@ const CHOICES: { id: MeetingBotChoice; label: string; pros: string[]; cons: stri
     label: "Vexa (BYO)",
     pros: ["Self-hosted, Apache 2.0", "Audio stays in your network"],
     cons: ["You run Vexa separately", "Set VEXA_API_URL in .env"],
-  },
-  {
-    id: "recall",
-    label: "Recall.ai (BYOK)",
-    pros: ["Most reliable joins", "Vendor-managed"],
-    cons: ["~$0.50/hour", "Audio leaves your network"],
   },
   {
     id: "skip",
@@ -27,19 +21,17 @@ const CHOICES: { id: MeetingBotChoice; label: string; pros: string[]; cons: stri
 export function MeetingCapturePicker({
   value,
   onChange,
-  onRecallKey,
   onVexaUrl,
 }: {
   value: MeetingBotChoice;
   onChange: (v: MeetingBotChoice) => void;
-  onRecallKey: (k: string) => void;
   onVexaUrl?: (u: string) => void;
 }) {
   return (
     <Card>
       <CardContent className="space-y-3 p-6">
         <h3 className="text-lg font-semibold">Meeting capture</h3>
-        <div className="grid md:grid-cols-3 gap-3">
+        <div className="grid md:grid-cols-2 gap-3">
           {CHOICES.map((c) => (
             <label
               key={c.id}
@@ -70,14 +62,6 @@ export function MeetingCapturePicker({
             </label>
           ))}
         </div>
-        {value === "recall" && (
-          <input
-            type="password"
-            placeholder="Recall.ai API key"
-            className="w-full border p-2 rounded text-sm"
-            onChange={(e) => onRecallKey(e.target.value)}
-          />
-        )}
         {value === "vexa" && (
           <input
             type="url"

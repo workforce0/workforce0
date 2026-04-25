@@ -211,7 +211,7 @@ export class MeetingService {
         meetingUrl: input.meetingUrl,
         startTime,
         status: 'scheduled',
-        source: input.source ?? 'recall',
+        source: input.source ?? 'vexa',
       },
     });
   }

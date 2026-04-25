@@ -16,8 +16,7 @@ import { createChildLogger } from '../lib/logger.js';
 const logger = createChildLogger({ service: 'SetupStep0' });
 
 const SaveBody = z.object({
-  meetingBotProvider: z.enum(['vexa', 'recall', 'skip']).optional(),
-  recallApiKey: z.string().optional(),
+  meetingBotProvider: z.enum(['vexa', 'skip']).optional(),
   vexaApiUrl: z.string().url().optional(),
   localTier: z.enum(['light', 'default', 'heavy', 'none']).optional(),
 });
@@ -83,9 +82,6 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
     if (meetingBotProvider === 'vexa' && parsed.data.vexaApiUrl) {
       envHints.VEXA_API_URL = parsed.data.vexaApiUrl;
     }
-    if (meetingBotProvider === 'recall' && parsed.data.recallApiKey) {
-      envHints.RECALL_API_KEY = parsed.data.recallApiKey;
-    }
     if (localTier && localTier !== 'none') {
       profiles.push('local-llm', 'local-stt');
       envHints.OLLAMA_BASE_URL = 'http://ollama:11434';
@@ -117,14 +113,13 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
     });
 
     // Log only non-sensitive metadata. We deliberately do not log envHints
-    // (or any derivative of parsed.data.recallApiKey) to satisfy CodeQL's
-    // taint analysis and avoid BYOK secrets ending up in log aggregators.
-    // The keys (e.g. RECALL_API_KEY) are static names — no secret material —
-    // but we still pass a hand-built whitelist instead of Object.keys(envHints)
-    // so the log statement has no data-flow dependency on user-supplied values.
+    // values to satisfy CodeQL's taint analysis and avoid leaking
+    // user-supplied URLs into log aggregators. The keys themselves
+    // (e.g. VEXA_API_URL) are static names — no secret material — but we
+    // still pass a hand-built whitelist instead of Object.keys(envHints)
+    // so the log statement has no data-flow dependency on user input.
     const hintKeysLogged = profiles.slice();
     if (envHints.VEXA_API_URL) hintKeysLogged.push('VEXA_API_URL');
-    if (envHints.RECALL_API_KEY) hintKeysLogged.push('RECALL_API_KEY');
     if (envHints.OLLAMA_DEFAULT_MODEL) hintKeysLogged.push('OLLAMA_DEFAULT_MODEL');
     logger.info(
       { tenantId, profiles, hintKeys: hintKeysLogged },

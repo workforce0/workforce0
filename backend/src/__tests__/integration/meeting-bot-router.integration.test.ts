@@ -69,7 +69,7 @@ describe('integration: POST /api/meetings via MeetingBotRouter', () => {
 
   it('schedules via vexa when vexa is available', async () => {
     const router = new MeetingBotRouter(
-      [fakeProvider('vexa', true), fakeProvider('recall', true), new ManualProvider()],
+      [fakeProvider('vexa', true), new ManualProvider()],
       { get: async () => ({ meetingBotProviderId: null }) },
     );
     const app = buildApp(router, meetingService);
@@ -78,20 +78,21 @@ describe('integration: POST /api/meetings via MeetingBotRouter', () => {
     expect(JSON.parse(res.body).data.provider).toBe('vexa');
   });
 
-  it('falls through to recall when vexa is unavailable', async () => {
+  it('falls through to manual (NO_BOT_PROVIDER) when vexa is unavailable', async () => {
     const router = new MeetingBotRouter(
-      [fakeProvider('vexa', false), fakeProvider('recall', true), new ManualProvider()],
+      [fakeProvider('vexa', false), new ManualProvider()],
       { get: async () => ({ meetingBotProviderId: null }) },
     );
     const app = buildApp(router, meetingService);
     const res = await app.inject({ method: 'POST', url: '/api/meetings', payload: { meetingUrl: 'https://meet.google.com/x' } });
-    expect(res.statusCode).toBe(201);
-    expect(JSON.parse(res.body).data.provider).toBe('recall');
+    expect(res.statusCode).toBe(503);
+    expect(JSON.parse(res.body).error.code).toBe('NO_BOT_PROVIDER');
+    expect(meetingService.createScheduled).not.toHaveBeenCalled();
   });
 
   it('returns 503 with NO_BOT_PROVIDER when only manual is available', async () => {
     const router = new MeetingBotRouter(
-      [fakeProvider('vexa', false), fakeProvider('recall', false), new ManualProvider()],
+      [fakeProvider('vexa', false), new ManualProvider()],
       { get: async () => ({ meetingBotProviderId: null }) },
     );
     const app = buildApp(router, meetingService);
@@ -105,7 +106,7 @@ describe('integration: POST /api/meetings via MeetingBotRouter', () => {
     const failingVexa = fakeProvider('vexa', true);
     (failingVexa.scheduleBot as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Vexa exploded'));
     const router = new MeetingBotRouter(
-      [failingVexa, fakeProvider('recall', false), new ManualProvider()],
+      [failingVexa, new ManualProvider()],
       { get: async () => ({ meetingBotProviderId: null }) },
     );
     const app = buildApp(router, meetingService);
@@ -114,14 +115,14 @@ describe('integration: POST /api/meetings via MeetingBotRouter', () => {
     expect(meetingService.markFailed).toHaveBeenCalledWith('m-1', 'Vexa exploded');
   });
 
-  it('respects tenant preference (recall) over default order', async () => {
+  it('respects tenant preference (vexa) over default order', async () => {
     const router = new MeetingBotRouter(
-      [fakeProvider('vexa', true), fakeProvider('recall', true), new ManualProvider()],
-      { get: async () => ({ meetingBotProviderId: 'recall' }) },
+      [fakeProvider('vexa', true), new ManualProvider()],
+      { get: async () => ({ meetingBotProviderId: 'vexa' }) },
     );
     const app = buildApp(router, meetingService);
     const res = await app.inject({ method: 'POST', url: '/api/meetings', payload: { meetingUrl: 'https://meet.google.com/x' } });
     expect(res.statusCode).toBe(201);
-    expect(JSON.parse(res.body).data.provider).toBe('recall');
+    expect(JSON.parse(res.body).data.provider).toBe('vexa');
   });
 });

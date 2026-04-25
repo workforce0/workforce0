@@ -185,19 +185,6 @@ describe('setup-step0 routes', () => {
     expect(row?.step0Migrated).toBe(true);
   });
 
-  it('POST /save-step0 with recall stores RECALL_API_KEY hint', async () => {
-    const { app } = buildApp();
-    await app.ready();
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/setup/save-step0',
-      payload: { meetingBotProvider: 'recall', recallApiKey: 'sk-test-recall' },
-    });
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.data.envHints.RECALL_API_KEY).toBe('sk-test-recall');
-  });
-
   it('POST /save-step0 rejects invalid body', async () => {
     const { app } = buildApp();
     await app.ready();

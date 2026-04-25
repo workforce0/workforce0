@@ -30,10 +30,9 @@ At least one provider must be configured.
 
 ## 4. Meeting capture
 
-Three options:
+Two options:
 
 - **Vexa (BYO)** — self-hosted Vexa instance you run separately; set `VEXA_API_URL` in `.env` to point at it
-- **Recall.ai (BYOK)** — vendor-managed, ~$0.50/hour
 - **Skip** — manual upload only
 
 ## 5. Integrations

@@ -41,7 +41,7 @@ function createMockMeetingService() {
   };
 }
 
-function createMockMeetingBotRouter(providerId: 'vexa' | 'recall' | 'manual' = 'manual') {
+function createMockMeetingBotRouter(providerId: 'vexa' | 'manual' = 'manual') {
   const provider = {
     id: providerId,
     displayName: providerId,
@@ -152,7 +152,7 @@ describe('Meetings Routes', () => {
     });
 
     it('dispatches to the resolved provider and returns 201 with provider id', async () => {
-      const router = createMockMeetingBotRouter('recall');
+      const router = createMockMeetingBotRouter('vexa');
       router.provider.scheduleBot.mockResolvedValue({
         botId: 'bot-xyz',
         status: 'scheduled',
@@ -178,7 +178,7 @@ describe('Meetings Routes', () => {
       const body = res.json();
       expect(body.success).toBe(true);
       expect(body.data.botId).toBe('bot-xyz');
-      expect(body.data.provider).toBe('recall');
+      expect(body.data.provider).toBe('vexa');
       expect(body.data.meetingId).toBe('meeting-new');
       expect(mockMeetingService.createScheduled).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,7 +196,7 @@ describe('Meetings Routes', () => {
     });
 
     it('returns 502 BOT_SCHEDULE_FAILED and marks meeting failed when provider throws', async () => {
-      const router = createMockMeetingBotRouter('recall');
+      const router = createMockMeetingBotRouter('vexa');
       router.provider.scheduleBot.mockRejectedValue(new Error('upstream is down'));
       mockMeetingService.createScheduled.mockResolvedValue({
         id: 'meeting-bad',

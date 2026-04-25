@@ -159,7 +159,6 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
   const [localTier, setLocalTier] = useState<LocalTier>("none");
   const [meetingBotProvider, setMeetingBotProvider] =
     useState<MeetingBotChoice>("vexa");
-  const [recallApiKey, setRecallApiKey] = useState<string>("");
   const [vexaApiUrl, setVexaApiUrl] = useState<string>("");
   const [envHints, setEnvHints] = useState<Record<string, string> | null>(null);
   const [savingStep0, setSavingStep0] = useState(false);
@@ -184,7 +183,6 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           meetingBotProvider,
-          recallApiKey: meetingBotProvider === "recall" ? recallApiKey : undefined,
           vexaApiUrl:
             meetingBotProvider === "vexa" && vexaApiUrl ? vexaApiUrl : undefined,
           localTier,
@@ -385,7 +383,6 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
                 <MeetingCapturePicker
                   value={meetingBotProvider}
                   onChange={setMeetingBotProvider}
-                  onRecallKey={setRecallApiKey}
                   onVexaUrl={setVexaApiUrl}
                 />
 

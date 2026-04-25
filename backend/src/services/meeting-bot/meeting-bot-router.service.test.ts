@@ -34,40 +34,38 @@ describe('MeetingBotRouter', () => {
 
   it('returns the preferred provider when available', async () => {
     const vexa = fakeProvider('vexa', true);
-    const recall = fakeProvider('recall', true);
-    const router = new MeetingBotRouter([vexa, recall, manual], settings('vexa'));
+    const router = new MeetingBotRouter([vexa, manual], settings('vexa'));
     const p = await router.resolveProvider('t1');
     expect(p.id).toBe('vexa');
   });
 
-  it('falls through to next when preferred is unavailable', async () => {
+  it('falls through to manual when preferred (vexa) is unavailable', async () => {
     const vexa = fakeProvider('vexa', false);
-    const recall = fakeProvider('recall', true);
-    const router = new MeetingBotRouter([vexa, recall, manual], settings('vexa'));
-    const p = await router.resolveProvider('t1');
-    expect(p.id).toBe('recall');
-  });
-
-  it('returns manual as terminal fallback', async () => {
-    const vexa = fakeProvider('vexa', false);
-    const recall = fakeProvider('recall', false);
-    const router = new MeetingBotRouter([vexa, recall, manual], settings('vexa'));
+    const router = new MeetingBotRouter([vexa, manual], settings('vexa'));
     const p = await router.resolveProvider('t1');
     expect(p.id).toBe('manual');
   });
 
-  it('uses default order when tenant has no preference', async () => {
+  it('returns manual as terminal fallback when nothing else is available', async () => {
+    const vexa = fakeProvider('vexa', false);
+    const router = new MeetingBotRouter([vexa, manual], settings('vexa'));
+    const p = await router.resolveProvider('t1');
+    expect(p.id).toBe('manual');
+  });
+
+  it('uses default order (vexa → manual) when tenant has no preference', async () => {
     const vexa = fakeProvider('vexa', true);
-    const recall = fakeProvider('recall', true);
-    const router = new MeetingBotRouter([vexa, recall, manual], settings(null));
+    const router = new MeetingBotRouter([vexa, manual], settings(null));
     const p = await router.resolveProvider('t1');
     expect(p.id).toBe('vexa');
   });
 
   it('skips a missing provider entry gracefully', async () => {
-    const vexa = fakeProvider('vexa', true);
-    const router = new MeetingBotRouter([vexa, manual], settings('recall'));
+    // The router is constructed without a vexa provider — only manual is
+    // registered. The default order still tries 'vexa' first, finds nothing,
+    // and falls through to manual.
+    const router = new MeetingBotRouter([manual], settings(null));
     const p = await router.resolveProvider('t1');
-    expect(p.id).toBe('vexa');
+    expect(p.id).toBe('manual');
   });
 });

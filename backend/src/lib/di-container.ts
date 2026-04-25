@@ -242,7 +242,6 @@ import { AgentHub } from '../services/agent-hub/agent-hub.service.js';
 import {
   MeetingBotRouter,
   ManualProvider,
-  RecallProvider,
   VexaProvider,
 } from '../services/meeting-bot/index.js';
 
@@ -416,10 +415,8 @@ export interface Services {
   agentHub: AgentHub;
 
   // Meeting bot router (live-capture provider abstraction —
-  // resolves vexa | recall | manual per tenant at request time).
+  // resolves vexa | manual per tenant at request time).
   meetingBotRouter: MeetingBotRouter;
-  /** Shared with the Recall webhook route for HMAC verification. */
-  recallWebhookSecret: string | undefined;
 
   /** Validated env-derived config — exposed so routes (e.g.
    *  /api/integrations/status) can probe feature URLs without
@@ -1164,14 +1161,9 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   // STEP 6.96: Meeting bot router (live-capture provider abstraction)
   // ==========================================================================
   // Build providers; isAvailable() is checked at request time, so even
-  // with no Recall key or no Vexa stack we register all three and let
-  // the router route around unavailable ones.
+  // with no Vexa stack the router routes around unavailable providers
+  // and falls through to the always-available ManualProvider.
   const manualProvider = new ManualProvider();
-  const recallProvider = new RecallProvider({
-    apiKey: config.RECALL_API_KEY,
-    webhookSecret: config.RECALL_WEBHOOK_SECRET,
-    baseUrl: config.RECALL_API_BASE_URL,
-  });
   const vexaProvider = new VexaProvider({
     baseUrl: config.VEXA_API_URL ?? 'http://vexa-api:18056',
   });
@@ -1185,7 +1177,6 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
       return {
         meetingBotProviderId: (row?.meetingBotProviderId ?? null) as
           | 'vexa'
-          | 'recall'
           | 'manual'
           | null,
       };
@@ -1193,10 +1184,10 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   };
 
   const meetingBotRouter = new MeetingBotRouter(
-    [vexaProvider, recallProvider, manualProvider],
+    [vexaProvider, manualProvider],
     tenantSettingsAdapter,
   );
-  logger.info('MeetingBotRouter initialized with vexa/recall/manual providers');
+  logger.info('MeetingBotRouter initialized with vexa/manual providers');
 
   // ==========================================================================
   // STEP 7: Register all services on Fastify instance
@@ -1279,7 +1270,6 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     agentJobQueue,
     agentHub,
     meetingBotRouter,
-    recallWebhookSecret: config.RECALL_WEBHOOK_SECRET,
     config,
     hardwareDetectService: new HardwareDetectService(),
   };

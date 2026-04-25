@@ -77,7 +77,6 @@ import { registerGoogleDriveWebhook } from './webhooks/google-drive.webhook.js';
 import { registerSlackEventsWebhook } from './webhooks/slack-events.handler.js';
 import { registerEmailReplyWebhook } from './webhooks/email-reply.handler.js';
 import { registerTwilioWhatsAppWebhook } from './webhooks/twilio-whatsapp.handler.js';
-import { meetingBotRecallWebhookRoutes } from './webhooks/meeting-bot-recall.routes.js';
 import { engagementRoutes } from './engagements.routes.js';
 import { modelConfigRoutes } from './model-config.routes.js';
 import { teamRoutes } from './team.routes.js';
@@ -369,11 +368,6 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       // shape as Twilio voice — lives here because it doesn't need the voice
       // service, only ApprovalFanoutService.
       await registerTwilioWhatsAppWebhook(webhookInstance);
-
-      // Step 0: Recall.ai bot-event webhook (HMAC-validated). Mounted at
-      // /webhooks/meeting-bot/recall — the parent register prefix is
-      // /webhooks, so we add the /meeting-bot segment here.
-      await webhookInstance.register(meetingBotRecallWebhookRoutes, { prefix: '/meeting-bot' });
 
       // Register Twilio webhooks (for voice callback and status)
       const { twilioVoiceService } = fastify.services;

@@ -1,13 +1,13 @@
 /**
  * MeetingBotProvider — abstracts live-meeting capture across Vexa
- * (bundled), Recall.ai (BYOK), and Manual (always-available fallback).
+ * (BYO) and Manual (always-available fallback).
  *
  * @module services/meeting-bot/meeting-bot-provider.types
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-export type ProviderId = 'vexa' | 'recall' | 'manual';
+export type ProviderId = 'vexa' | 'manual';
 
 export interface ScheduleBotInput {
   /** The meeting URL (Google Meet / Zoom / Teams). */
