@@ -14,8 +14,8 @@ describe('promptApproval (stdin serialization)', () => {
   let originalSetRawMode: unknown;
   let originalResume: unknown;
   let originalPause: unknown;
-  let onceSpy: ReturnType<typeof vi.spyOn>;
-  let writeSpy: ReturnType<typeof vi.spyOn>;
+  let onceSpy: any;
+  let writeSpy: any;
 
   beforeEach(() => {
     __resetApprovalChainForTests();
