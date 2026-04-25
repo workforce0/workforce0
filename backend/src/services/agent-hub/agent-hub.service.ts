@@ -303,16 +303,29 @@ export class AgentHub {
               }
             }
 
-            if (this.commsRouter) {
-              this.commsRouter.notify(agentJob.tenantId, {
-                type: msg.status === 'done' ? 'agent.completed' : 'agent.failed',
-                taskId,
-                data: msg.data,
-              }).catch(() => {});
-            }
+            // CommunicationRouter exposes `send(SendMessageInput)`, not a
+            // generic `notify(tenantId, event)`. The intended pub/sub-style
+            // broadcast here is already covered by the SSE publish at the top
+            // of this handler (`agent_job.status_changed`), which the web UI
+            // and any external listener already consume. We removed the
+            // broken `commsRouter.notify(...)` call rather than retrofitting
+            // a fake message — chief-of-staff comms still happen through
+            // their own triggers (clarification requests, brief approvals)
+            // via the same router. See task #189.
           }
         } catch (err) {
-          log.error('Failed to bridge job result to Ticket/AgentTask', { jobId: msg.jobId, error: (err as Error).message });
+          // Pino's signature is (obj, msg) — the existing (msg, obj) usage
+          // across this file silently drops the data object, which is why
+          // earlier "Failed to bridge…" errors had no context. We log it
+          // the right way around here so the actual cause is visible.
+          log.error(
+            {
+              jobId: msg.jobId,
+              error: (err as Error).message,
+              stack: (err as Error).stack,
+            },
+            'Failed to bridge job result to Ticket/AgentTask',
+          );
         }
         break;
     }
