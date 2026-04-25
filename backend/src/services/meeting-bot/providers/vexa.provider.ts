@@ -64,6 +64,7 @@ export class VexaProvider implements MeetingBotProvider {
         meeting_url: input.meetingUrl,
         bot_name: input.botName ?? 'Workforce0 Bot',
         metadata: { tenantId: input.tenantId, meetingId: input.meetingId },
+        ...(input.startTime ? { start_at: input.startTime } : {}),
       }),
     });
     if (!res.ok) {

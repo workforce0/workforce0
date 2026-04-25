@@ -11,13 +11,20 @@ interface Status {
 
 export default function SystemStatusPage() {
   const [rows, setRows] = useState<Status[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const tick = () =>
       fetch("/api/integrations/status", { credentials: "include" })
-        .then((r) => r.json())
-        .then((j: { data: Status[] }) => setRows(j.data))
-        .catch(() => {});
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((j: { data: Status[] }) => {
+          setRows(j.data);
+          setError(null);
+        })
+        .catch((e: Error) => setError(e.message));
     tick();
     const id = setInterval(tick, 10_000);
     return () => clearInterval(id);
@@ -29,6 +36,11 @@ export default function SystemStatusPage() {
       <p className="text-sm text-ink-tertiary">
         Health of bundled services. Polls every 10 seconds.
       </p>
+      {error && (
+        <div className="text-rose text-sm">
+          Failed to load status: {error}. Retrying every 10s.
+        </div>
+      )}
       <Card>
         <CardContent className="p-0">
           <table className="w-full text-sm">

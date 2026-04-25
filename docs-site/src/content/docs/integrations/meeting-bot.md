@@ -59,7 +59,7 @@ Recall.ai is regionalized — if your account lives in `us-east-1` or `eu-centra
 
 ## Option 3 — Skip (manual upload only)
 
-Don't enable any of the above. Users upload recordings via the existing `/api/meetings/upload` endpoint after the meeting. Always works.
+Don't enable any of the above. Users upload recordings after the meeting via the two-step presigned-upload flow: `POST /api/meetings/upload/presign` to mint a URL, then `POST /api/meetings/:id/upload/complete` once the file is uploaded. Always works.
 
 ## How the router picks
 

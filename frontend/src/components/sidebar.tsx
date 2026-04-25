@@ -133,7 +133,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       {/* Navigation */}
       <nav aria-label="Main navigation" className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          // Pick the deepest matching nav entry as active so parents (e.g. /settings)
+          // don't also light up when on a child route (e.g. /settings/system-status).
+          const matches = navigation
+            .filter((n) => pathname === n.href || pathname.startsWith(n.href + "/"))
+            .sort((a, b) => b.href.length - a.href.length);
+          const isActive = matches.length > 0 && matches[0].href === item.href;
           const showBadge = item.href === "/dashboard" && pendingCount > 0;
           return (
             <Link

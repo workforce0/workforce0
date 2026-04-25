@@ -31,6 +31,21 @@ function decodeWebhookSecret(secret: string): Buffer {
   return Buffer.from(secret, 'utf8');
 }
 
+/**
+ * Validate a string is well-formed base64 and decode it. Returns null if the
+ * input contains characters outside the base64 alphabet — guards against
+ * Buffer.from('garbage', 'base64') silently returning misleading bytes that
+ * could trip up timingSafeEqual length checks.
+ */
+function safeBase64(s: string): Buffer | null {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(s)) return null;
+  try {
+    return Buffer.from(s, 'base64');
+  } catch {
+    return null;
+  }
+}
+
 export async function meetingBotRecallWebhookRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/recall', async (request: FastifyRequest, reply: FastifyReply) => {
     const services = (fastify as unknown as {
@@ -83,12 +98,8 @@ export async function meetingBotRecallWebhookRoutes(fastify: FastifyInstance): P
       .map((parts) => parts[1] as string);
 
     const valid = candidateSigs.some((sig) => {
-      let buf: Buffer;
-      try {
-        buf = Buffer.from(sig, 'base64');
-      } catch {
-        return false;
-      }
+      const buf = safeBase64(sig);
+      if (!buf) return false;
       if (buf.length !== expectedBuf.length) return false;
       return crypto.timingSafeEqual(buf, expectedBuf);
     });

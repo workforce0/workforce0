@@ -46,4 +46,4 @@ Out of scope for Step 0. Vexa (the bundled meeting bot) handles its own diarizat
 ## Troubleshooting
 
 - **Model download stuck**: `docker logs workforce0-whisper` — Hugging Face Hub rate limits or network issues. Backend retries 3× on container restart.
-- **Transcription times out**: `WHISPER_TIMEOUT_MULT` controls the timeout (default 2× audio duration). Increase for very long files.
+- **Transcription times out**: `WHISPER_TIMEOUT_MULT` is a multiplier on a fixed 5-minute base (default `2`, i.e. 10 minutes). Increase for very long recordings or slow CPUs; lower it on GPU to fail fast on stuck workers.

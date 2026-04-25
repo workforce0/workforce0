@@ -120,7 +120,12 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = (request as FastifyRequest & { tenantId: string }).tenantId;
-      const body = request.body as { meetingUrl: string; title?: string; botName?: string };
+      const body = request.body as {
+        meetingUrl: string;
+        title?: string;
+        botName?: string;
+        scheduledStart?: string;
+      };
 
       const provider = await fastify.services.meetingBotRouter.resolveProvider(tenantId);
 
@@ -139,6 +144,8 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
         tenantId,
         title: body.title ?? 'Scheduled meeting',
         meetingUrl: body.meetingUrl,
+        source: provider.id,
+        scheduledStart: body.scheduledStart,
       });
 
       try {
@@ -147,6 +154,7 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
           meetingId: meeting.id,
           tenantId,
           botName: body.botName,
+          startTime: body.scheduledStart,
         });
         return reply.status(201).send({
           success: true,

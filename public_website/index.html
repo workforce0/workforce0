@@ -144,12 +144,12 @@
       <section class="step-zero" id="step-zero" data-animate>
         <div class="section-head">
           <h2>Step 0 — Runs on your laptop</h2>
-          <p>One <code>docker compose up</code> starts a local meeting bot, local LLMs, and local transcription. No external accounts required. BYOK keys (Anthropic, OpenAI, Google) work alongside as fallbacks.</p>
+          <p>One <code>docker compose up</code> starts local LLMs and local transcription. Live meeting capture is BYO — point at your own self-hosted Vexa endpoint or bring a Recall.ai key. BYOK keys (Anthropic, OpenAI, Google) work alongside as fallbacks.</p>
         </div>
         <div class="step-zero-grid">
           <div class="panel">
-            <h3>Bundled Vexa</h3>
-            <p>Apache 2.0 meeting bot — joins Google Meet/Zoom/Teams. Audio stays on your host.</p>
+            <h3>Self-hosted Vexa endpoint</h3>
+            <p>Apache 2.0 meeting bot — joins Google Meet/Zoom/Teams. Run Vexa yourself and point <code>VEXA_API_URL</code> at it; audio stays on your infra.</p>
           </div>
           <div class="panel">
             <h3>Local LLMs</h3>

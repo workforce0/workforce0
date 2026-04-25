@@ -15,10 +15,23 @@ export function HardwareCheck({ onDetected }: { onDetected: (p: HardwareProfile)
 
   useEffect(() => {
     fetch("/api/setup/hardware", { credentials: "include" })
-      .then((r) => r.json())
-      .then((j: { data: HardwareProfile }) => {
-        setProfile(j.data);
-        onDetected(j.data);
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((j: unknown) => {
+        const candidate = (j as { data?: HardwareProfile })?.data;
+        if (
+          !candidate ||
+          typeof candidate.totalRamGB !== "number" ||
+          typeof candidate.cpuCores !== "number" ||
+          typeof candidate.availableForLLM_GB !== "number" ||
+          typeof candidate.recommendedTier !== "string"
+        ) {
+          throw new Error("invalid hardware profile shape");
+        }
+        setProfile(candidate);
+        onDetected(candidate);
       })
       .catch(() => {
         const fallback: HardwareProfile = {

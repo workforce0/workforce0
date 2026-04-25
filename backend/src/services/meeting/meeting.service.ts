@@ -189,7 +189,13 @@ export class MeetingService {
    *
    * Step 0 (meeting-bot abstraction).
    */
-  async createScheduled(input: { tenantId: string; title: string; meetingUrl: string }) {
+  async createScheduled(input: {
+    tenantId: string;
+    title: string;
+    meetingUrl: string;
+    source?: string;
+    scheduledStart?: string;
+  }) {
     if (!this.prisma) {
       throw new AppError(
         'MeetingService.createScheduled requires prisma client',
@@ -197,14 +203,15 @@ export class MeetingService {
         'INTERNAL',
       );
     }
+    const startTime = input.scheduledStart ? new Date(input.scheduledStart) : new Date();
     return this.prisma.meeting.create({
       data: {
         tenantId: input.tenantId,
         title: input.title,
         meetingUrl: input.meetingUrl,
-        startTime: new Date(),
+        startTime,
         status: 'scheduled',
-        source: 'recall',
+        source: input.source ?? 'recall',
       },
     });
   }

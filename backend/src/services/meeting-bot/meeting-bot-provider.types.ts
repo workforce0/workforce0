@@ -18,6 +18,8 @@ export interface ScheduleBotInput {
   tenantId: string;
   /** Display name for the bot in the meeting (default: "Workforce0 Bot"). */
   botName?: string;
+  /** ISO 8601 timestamp for when the bot should join. If absent, providers join now. */
+  startTime?: string;
 }
 
 export interface ScheduleBotResult {

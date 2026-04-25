@@ -67,6 +67,9 @@ export async function integrationsStatusRoutes(fastify: FastifyInstance): Promis
         cfg.WHISPER_BASE_URL ? `${cfg.WHISPER_BASE_URL}/health` : undefined,
         !!cfg.WHISPER_BASE_URL,
       ),
+      // Vexa is a BYO endpoint (self-hosted, see README "Step 0"). When
+      // VEXA_API_URL is unset, the meeting-bot router will never select Vexa,
+      // so reporting `disabled` here matches runtime behaviour exactly.
       probe(
         'vexa_api',
         cfg.VEXA_API_URL ? `${cfg.VEXA_API_URL}/health` : undefined,

@@ -165,7 +165,8 @@ export class AICouncil {
    */
   async generatePRDWithCouncil(
     transcript: string,
-    options: GeneratePRDOptions = {}
+    options: GeneratePRDOptions = {},
+    agentType: string = 'ba_agent'
   ): Promise<CouncilDecision> {
     const startTime = Date.now();
     const timing = { primaryGeneration: 0, critique: 0, consensus: 0, revision: 0, total: 0 };
@@ -316,7 +317,7 @@ export class AICouncil {
     } finally {
       timing.total = Date.now() - startTime;
       emitCouncilSessionComplete({
-        agentType: 'ba_agent',
+        agentType,
         rounds: iterationCount,
         exitReason,
         totalLatencyMs: timing.total,
@@ -389,7 +390,8 @@ export class AICouncil {
    */
   async generatePRDQuick(
     transcript: string,
-    options: GeneratePRDOptions = {}
+    options: GeneratePRDOptions = {},
+    agentType: string = 'ba_agent'
   ): Promise<CouncilDecision> {
     const startTime = Date.now();
 
@@ -434,7 +436,7 @@ export class AICouncil {
       throw err;
     } finally {
       emitCouncilSessionComplete({
-        agentType: 'ba_agent',
+        agentType,
         rounds: 0,
         exitReason,
         totalLatencyMs: Date.now() - startTime,

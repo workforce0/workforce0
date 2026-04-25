@@ -90,6 +90,7 @@ export class RecallProvider implements MeetingBotProvider {
         meeting_url: input.meetingUrl,
         bot_name: input.botName ?? 'Workforce0 Bot',
         metadata: { tenantId: input.tenantId, meetingId: input.meetingId },
+        ...(input.startTime ? { join_at: input.startTime } : {}),
       }),
     });
     if (!res.ok) {

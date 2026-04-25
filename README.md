@@ -156,7 +156,7 @@ cp .env.example .env
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-> **Going local?** See the [Step 0 — Local Everything](#step-0--local-everything) section below to bring up Vexa, Ollama, and faster-whisper alongside the core stack.
+> **Going local?** See the [Step 0 — Local Everything](#step-0--local-everything) section below to bring up Ollama and faster-whisper alongside the core stack. Vexa is BYO (run separately and point `VEXA_API_URL` at it); only the in-process Recall.ai client is bundled.
 
 The backend container applies pending Prisma migrations on boot, so
 there's no manual `db migrate` step — bring up the stack, wait ~30s for
