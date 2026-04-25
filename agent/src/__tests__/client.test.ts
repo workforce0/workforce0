@@ -55,16 +55,11 @@ vi.mock('../index.js', () => ({
 let mockWs: MockWebSocket;
 
 vi.mock('ws', () => {
-  return {
-    default: vi.fn().mockImplementation((_url: string) => {
-      mockWs = new MockWebSocket();
-      return mockWs;
-    }),
-    WebSocket: vi.fn().mockImplementation((_url: string) => {
-      mockWs = new MockWebSocket();
-      return mockWs;
-    }),
-  };
+  // vitest 4 + stricter JS: arrow fns can't be called with `new`. Use a class.
+  class WsCtor extends MockWebSocket {
+    constructor(_url: string) { super(); mockWs = this; }
+  }
+  return { default: WsCtor, WebSocket: WsCtor };
 });
 
 // Stub executor so dynamic import in executeJob doesn't fail
