@@ -677,38 +677,47 @@ export function createProcessors(deps: ProcessorDependencies) {
           !result.needsClarification &&
           (engagementService as any).advancePhase
         ) {
-          // Each transition has its OWN try/catch so a mid-walk failure
-          // doesn't leave the engagement permanently stuck in
-          // `understand` or `analyze_ask` (where neither the
-          // pending-approval UI nor the existing `approve → build`
-          // re-approve path can recover it). We also force confidence
-          // to 1.0 here: the BA agent finishing without flagging
-          // clarification is itself proof the work is done. If we
-          // forwarded `result.confidence` and Gemini returned 0.4, the
-          // first transition would silently *pause* the engagement
-          // (CONFIDENCE_THRESHOLD is 0.5) and the rest would throw.
-          const intermediates = [
-            { from: 'listen', to: 'understand' },
-            { from: 'understand', to: 'analyze_ask' },
-            { from: 'analyze_ask', to: 'approve' },
-          ] as const;
+          // Each transition has its OWN try/catch and we re-read the
+          // engagement's current phase before each step, so:
+          //   (a) a transient mid-walk failure no longer leaves the
+          //       engagement permanently stuck — a BA retry will pick
+          //       up wherever the previous run got to instead of
+          //       trying to redo `listen → understand` on something
+          //       that's already at `understand` and immediately
+          //       throwing "Invalid transition" (greptile P1 here).
+          //   (b) the loop continues on transient failures rather than
+          //       breaking, so a Prisma blip on step 2 doesn't skip
+          //       step 3 — at worst the next retry catches it.
+          // We also force confidence to 1.0 because the BA agent
+          // finishing without flagging clarification is itself proof
+          // the work is done. Forwarding `result.confidence` would
+          // silently pause the engagement when Gemini returned <0.5.
+          const PHASE_ORDER = ['listen', 'understand', 'analyze_ask', 'approve'] as const;
+          const targets = ['understand', 'analyze_ask', 'approve'] as const;
           let stuckAt: string | null = null;
-          for (const step of intermediates) {
+          for (const target of targets) {
             try {
+              const current = await (engagementService as any).get?.(createdEngagementId);
+              const currentIdx = current ? PHASE_ORDER.indexOf(current.phase) : -1;
+              const targetIdx = PHASE_ORDER.indexOf(target);
+              // Skip if the engagement is already at-or-past this
+              // phase (likely a retry of a partially-completed walk).
+              if (currentIdx >= targetIdx) continue;
               await (engagementService as any).advancePhase(tenantId, createdEngagementId, {
                 confidence: 1.0,
-                targetPhase: step.to,
+                targetPhase: target,
                 output: { prdId: result.prd.id, baCompleted: true },
               });
             } catch (advanceErr) {
-              stuckAt = step.from;
+              stuckAt = target;
               logger.error('Failed to advance engagement phase after BA', {
                 engagementId: createdEngagementId,
-                from: step.from,
-                to: step.to,
+                target,
                 error: (advanceErr as Error).message,
               });
-              break;
+              // Don't break — a later phase might still succeed even
+              // if this one threw transiently. If it doesn't, the
+              // next BA retry's skip-if-past-phase check resumes.
             }
           }
           if (!stuckAt) {
@@ -717,7 +726,7 @@ export function createProcessors(deps: ProcessorDependencies) {
               prdId: result.prd.id,
             });
           } else {
-            logger.warn('Engagement stuck after BA — manual cleanup may be needed', {
+            logger.warn('Engagement may be stuck after BA — next retry will resume', {
               engagementId: createdEngagementId,
               prdId: result.prd.id,
               stuckAt,
