@@ -18,7 +18,6 @@ Share the output file in your support thread (issues, Discord, email).
 - backend, frontend, postgres, redis (always present)
 - ollama (if `local-llm` profile active)
 - whisper (if `local-stt` profile active)
-- vexa-api, vexa-bot-manager, docker-socket-proxy (if `meeting-bot` profile active)
 
 ## Sample output
 

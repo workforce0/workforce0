@@ -182,19 +182,19 @@ Workforce0 ships with optional local-first bundles. One `docker compose up` can 
 
 - **Local LLMs** (Qwen 3.5 / Mistral Small 3 via Ollama)
 - **Local STT** (faster-whisper-server)
-- **Bundled meeting bot** (Vexa, Apache 2.0)
+- **Optional integration with self-hosted Vexa (BYO endpoint)** — point `VEXA_API_URL` at any Vexa instance you run separately
 
 Activate via Compose profiles:
 
 ```bash
-COMPOSE_PROFILES=meeting-bot,local-llm,local-stt docker compose -f docker-compose.prod.yml up -d
+COMPOSE_PROFILES=local-llm,local-stt docker compose -f docker-compose.prod.yml up -d
 ```
 
 The setup wizard at `/setup` will detect your hardware and recommend a tier. See:
 
 - [Local Models](https://docs.workforce0.com/integrations/local-models/) — Ollama bundle
 - [Transcription](https://docs.workforce0.com/integrations/transcription/) — faster-whisper bundle
-- [Meeting Bot](https://docs.workforce0.com/integrations/meeting-bot/) — Vexa bundle
+- [Meeting Bot](https://docs.workforce0.com/integrations/meeting-bot/) — Vexa BYO + Recall.ai BYOK
 - [Setup Wizard](https://docs.workforce0.com/self-hosting/wizard/) — full walkthrough
 - [Diagnose](https://docs.workforce0.com/self-hosting/diagnose/) — `bin/diagnose.sh` for troubleshooting
 

@@ -18,6 +18,7 @@ const logger = createChildLogger({ service: 'SetupStep0' });
 const SaveBody = z.object({
   meetingBotProvider: z.enum(['vexa', 'recall', 'skip']).optional(),
   recallApiKey: z.string().optional(),
+  vexaApiUrl: z.string().url().optional(),
   localTier: z.enum(['light', 'default', 'heavy', 'none']).optional(),
 });
 
@@ -77,7 +78,11 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
     // Backend container can't write to the host .env, so we return them.
     const envHints: Record<string, string> = {};
     const profiles: string[] = [];
-    if (meetingBotProvider === 'vexa') profiles.push('meeting-bot');
+    // Vexa is BYO — the user runs their own Vexa instance and points
+    // VEXA_API_URL at it. No bundled profile to enable.
+    if (meetingBotProvider === 'vexa' && parsed.data.vexaApiUrl) {
+      envHints.VEXA_API_URL = parsed.data.vexaApiUrl;
+    }
     if (meetingBotProvider === 'recall' && parsed.data.recallApiKey) {
       envHints.RECALL_API_KEY = parsed.data.recallApiKey;
     }

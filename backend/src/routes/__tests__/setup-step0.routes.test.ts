@@ -141,18 +141,26 @@ describe('setup-step0 routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/setup/save-step0',
-      payload: { meetingBotProvider: 'vexa', localTier: 'default' },
+      payload: {
+        meetingBotProvider: 'vexa',
+        vexaApiUrl: 'http://vexa.example.com:18056',
+        localTier: 'default',
+      },
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
     expect(body.success).toBe(true);
+    // Vexa is BYO — no bundled compose profile, just an env hint pointing
+    // at the user's existing instance.
     expect(body.data.profiles).toEqual(
-      expect.arrayContaining(['meeting-bot', 'local-llm', 'local-stt']),
+      expect.arrayContaining(['local-llm', 'local-stt']),
     );
+    expect(body.data.profiles).not.toContain('meeting-bot');
+    expect(body.data.envHints.VEXA_API_URL).toBe('http://vexa.example.com:18056');
     expect(body.data.envHints.OLLAMA_BASE_URL).toBe('http://ollama:11434');
     expect(body.data.envHints.OLLAMA_DEFAULT_MODEL).toBe('mistral-small-3:24b');
     expect(body.data.envHints.WHISPER_BASE_URL).toBe('http://whisper:8000');
-    expect(body.data.envHints.COMPOSE_PROFILES).toBe('meeting-bot,local-llm,local-stt');
+    expect(body.data.envHints.COMPOSE_PROFILES).toBe('local-llm,local-stt');
 
     const row = store.get('tenant-1');
     expect(row?.step0Migrated).toBe(true);

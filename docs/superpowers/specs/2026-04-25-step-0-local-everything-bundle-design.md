@@ -226,6 +226,12 @@ Only BA/QA/Supervisor have critique loops; all bounded ≤ 2.
 
 ## §6 — `MeetingBotProvider` abstraction
 
+> **Status update (2026-04-25):** Vexa bundling has been deferred — the spec's
+> claims about a `meeting-bot` Compose profile are aspirational. The provider
+> abstraction (this section's main contribution) is shipped, and `VexaProvider`
+> works against any Vexa instance the user runs separately. See issue #TBD for
+> the real bundling work.
+
 One interface, three implementations. All feed the same downstream pipeline (engagement creation, BA agent dispatch).
 
 ```ts
@@ -293,6 +299,12 @@ backend/src/services/meeting-bot/
 DI container wires the router into existing `/api/meetings/schedule` and bot-event handler routes; direct-Recall code paths get *replaced* (not paralleled) by `RecallProvider`.
 
 ## §7 — Local meeting bot bundle
+
+> **Status update (2026-04-25):** Vexa bundling has been deferred — the spec's
+> claims about a `meeting-bot` Compose profile are aspirational. The provider
+> abstraction (§6's main contribution) is shipped, and `VexaProvider` works
+> against any Vexa instance the user runs separately. See issue #TBD for the
+> real bundling work.
 
 We bundle Vexa's full compose (api + bot-manager + transcription + socket proxy), reusing Workforce0's Postgres and Redis instances. We deliberately *don't* use Vexa's "lite" config (single-Chrome, ephemeral Redis) because of known stability issues there.
 

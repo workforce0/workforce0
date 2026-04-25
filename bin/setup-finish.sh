@@ -4,7 +4,7 @@
 # Usage: ./bin/setup-finish.sh [--profile <profile>]...
 # Examples:
 #   ./bin/setup-finish.sh
-#   ./bin/setup-finish.sh --profile meeting-bot --profile local-llm
+#   ./bin/setup-finish.sh --profile local-llm --profile local-stt
 
 set -euo pipefail
 

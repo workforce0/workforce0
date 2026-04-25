@@ -6,9 +6,9 @@ export type MeetingBotChoice = "vexa" | "recall" | "skip";
 const CHOICES: { id: MeetingBotChoice; label: string; pros: string[]; cons: string[] }[] = [
   {
     id: "vexa",
-    label: "Bundled (Vexa)",
-    pros: ["No external account", "Apache 2.0", "Audio stays on host"],
-    cons: ["Adds ~310 MB RAM"],
+    label: "Vexa (BYO)",
+    pros: ["Self-hosted, Apache 2.0", "Audio stays in your network"],
+    cons: ["You run Vexa separately", "Set VEXA_API_URL in .env"],
   },
   {
     id: "recall",
@@ -28,10 +28,12 @@ export function MeetingCapturePicker({
   value,
   onChange,
   onRecallKey,
+  onVexaUrl,
 }: {
   value: MeetingBotChoice;
   onChange: (v: MeetingBotChoice) => void;
   onRecallKey: (k: string) => void;
+  onVexaUrl?: (u: string) => void;
 }) {
   return (
     <Card>
@@ -74,6 +76,14 @@ export function MeetingCapturePicker({
             placeholder="Recall.ai API key"
             className="w-full border p-2 rounded text-sm"
             onChange={(e) => onRecallKey(e.target.value)}
+          />
+        )}
+        {value === "vexa" && (
+          <input
+            type="url"
+            placeholder="VEXA_API_URL (e.g. http://vexa-api.internal:18056)"
+            className="w-full border p-2 rounded text-sm"
+            onChange={(e) => onVexaUrl?.(e.target.value)}
           />
         )}
       </CardContent>

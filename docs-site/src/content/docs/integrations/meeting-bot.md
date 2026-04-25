@@ -1,47 +1,33 @@
 ---
 title: Meeting Bot
-description: Three options for live meeting capture — bundled (Vexa), Recall.ai BYOK, or manual upload.
+description: Three options for live meeting capture — self-hosted Vexa (BYO endpoint), Recall.ai BYOK, or manual upload.
 ---
 
 Workforce0 supports three modes for capturing live meetings. Pick the one that fits your install.
 
-## Option 1 — Bundled (Vexa)
+## Option 1 — Vexa (self-hosted, BYO)
 
-The simplest path. Workforce0 ships a Vexa stack as an opt-in Compose profile. No external account, no API key, audio stays on your host.
+Workforce0 supports Vexa as a meeting-capture backend, but does **NOT currently bundle Vexa's containers**. Vexa's stack has 7+ services (admin-api, runtime-api, api-gateway, meeting-api, mcp, dashboard, tts-service) plus MinIO, Redis, and Postgres dependencies — bundling them sensibly alongside the Workforce0 base stack is non-trivial, and the maintainers have deferred that work.
 
-### Enable
+### Run Vexa separately, then point Workforce0 at it
 
-Add `meeting-bot` to your active profiles (the wizard does this for you):
-
-```bash
-COMPOSE_PROFILES=meeting-bot docker compose -f docker-compose.prod.yml up -d
-```
-
-This adds three containers:
-
-| Container | What it does |
-|---|---|
-| `workforce0-vexa-api` | HTTP API for scheduling/canceling bots |
-| `workforce0-vexa-bot-manager` | Spawns per-meeting Chrome bot containers |
-| `workforce0-docker-socket-proxy` | Whitelists `containers.{create,start,stop,inspect}` so bot-manager can spawn bots without root-on-host access |
-
-### Security note
-
-The bot-manager needs Docker control to spawn per-meeting containers. We isolate this through a socket proxy ([tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy)) that whitelists only specific Docker API calls. If bot-manager were ever compromised, the attacker could spawn/kill containers but could not exec arbitrary commands or mount host paths.
-
-### Existing installs
-
-Vexa needs a separate database (`workforce0_vexa`) on your existing Postgres. New installs get this automatically via `backend/db-init/01-create-vexa-db.sql` (which only runs on a fresh Postgres volume). **For existing installs**, run the bootstrap script once:
+To use Vexa, deploy it on its own following [Vexa's deployment guide](https://github.com/Vexa-ai/vexa/tree/main/deploy), then set `VEXA_API_URL` in your `.env` to point at it:
 
 ```bash
-./bin/bootstrap-vexa-db.sh
+VEXA_API_URL=http://your-vexa-host:18056
 ```
 
-It's idempotent — safe to re-run; it checks for the database first and only creates it when missing. After it succeeds, restart with the `meeting-bot` profile enabled:
+Workforce0's `VexaProvider` calls the following endpoints on the configured URL:
 
-```bash
-docker compose -f docker-compose.prod.yml --profile meeting-bot up -d
-```
+- `POST /bots` — schedule a bot to join a meeting
+- `GET /bots/:id/transcript` — fetch the transcript when the meeting ends
+- `GET /bots/:id` — poll bot status
+- `DELETE /bots/:id` — cancel a scheduled bot
+- `GET /health` — readiness probe used by the integration-status aggregator
+
+> **Caveat:** these endpoints reflect Workforce0's **expected contract** with Vexa. Vexa's actual API surface may have drifted — verify against [Vexa's docs](https://github.com/Vexa-ai/vexa) before relying on this in production. If your Vexa version exposes differently-named routes, the abstraction is small enough to fork — see `backend/src/services/meeting-bot/providers/vexa.provider.ts`.
+
+Tracking issue for first-class bundling work: [#TBD](https://github.com/workforce0/workforce0/issues).
 
 ## Option 2 — Recall.ai (BYOK)
 
@@ -77,4 +63,4 @@ Don't enable any of the above. Users upload recordings via the existing `/api/me
 
 ## How the router picks
 
-If a tenant has a preferred provider in `tenantSettings.meetingBotProviderId`, that's tried first. Otherwise the order is `vexa → recall → manual`. Each provider's `isAvailable()` is checked at request time, so an unavailable Vexa stack falls through to Recall (if configured), then to "please upload" (HTTP 503 `NO_BOT_PROVIDER`).
+If a tenant has a preferred provider in `tenantSettings.meetingBotProviderId`, that's tried first. Otherwise the order is `vexa → recall → manual`. Each provider's `isAvailable()` is checked at request time, so an unavailable Vexa endpoint falls through to Recall (if configured), then to "please upload" (HTTP 503 `NO_BOT_PROVIDER`).

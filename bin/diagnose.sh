@@ -13,7 +13,7 @@ OUTFILE="diagnostics-$(date +%Y%m%dT%H%M%S).txt"
   echo "─────────────────────────────────────"
   echo
 
-  for svc in backend frontend postgres redis ollama whisper vexa-api vexa-bot-manager docker-socket-proxy; do
+  for svc in backend frontend postgres redis ollama whisper; do
     cid=$(docker compose -f docker-compose.prod.yml ps -q "$svc" 2>/dev/null || true)
     if [ -z "$cid" ]; then
       echo "[$svc] not running"

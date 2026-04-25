@@ -25,7 +25,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-workforce0}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -69,14 +68,6 @@ services:
       # Local storage lives under /app/data/uploads inside the container.
       # The volume below persists uploads across container restarts.
       STORAGE_ROOT: /app/data/uploads
-      # Plan 2: defaults point at the internal `ollama` and `whisper`
-      # services (started via COMPOSE_PROFILES=local-llm / local-stt).
-      # When those profiles aren't enabled, the containers don't run,
-      # OllamaService.isAvailable()/LocalWhisperProvider.isAvailable()
-      # return false, and the AI Council / STT router falls through to
-      # the next provider in the chain. Safe to leave set unconditionally.
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
-      WHISPER_BASE_URL: ${WHISPER_BASE_URL:-http://whisper:8000}
     volumes:
       # Meeting audio/video uploads for the local storage driver. Not used
       # when STORAGE_DRIVER=s3 — safe to keep mounted either way.
@@ -122,72 +113,10 @@ services:
       - workforce0
 
   # ---------------------------------------------------------------------------
-  # Vexa meeting bot (opt-in via COMPOSE_PROFILES=meeting-bot)
-  # ---------------------------------------------------------------------------
-  vexa-api:
-    image: ghcr.io/vexa-project/vexa-api:0.6
-    container_name: workforce0-vexa-api
-    restart: unless-stopped
-    profiles: ["meeting-bot"]
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/workforce0_vexa
-      REDIS_URL: redis://redis:6379/1
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:18056/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    networks:
-      - workforce0
-
-  vexa-bot-manager:
-    image: ghcr.io/vexa-project/vexa-bot-manager:0.6
-    container_name: workforce0-vexa-bot-manager
-    restart: unless-stopped
-    profiles: ["meeting-bot"]
-    environment:
-      DOCKER_HOST: tcp://docker-socket-proxy:2375
-      VEXA_API_URL: http://vexa-api:18056
-    depends_on:
-      docker-socket-proxy:
-        condition: service_started
-      vexa-api:
-        condition: service_healthy
-    networks:
-      - workforce0
-
-  docker-socket-proxy:
-    image: tecnativa/docker-socket-proxy:0.3
-    container_name: workforce0-docker-socket-proxy
-    restart: unless-stopped
-    profiles: ["meeting-bot"]
-    environment:
-      CONTAINERS: 1
-      POST: 1
-      ALLOW_START: 1
-      ALLOW_STOP: 1
-      ALLOW_RESTARTS: 1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - workforce0
-
-  # vexa-transcription is part of the meeting-bot profile too, but it
-  # depends on the `whisper` service from Plan 2 (local-stt profile).
-  # Plan 2 adds the `whisper` service. For Plan 1 we deliberately do
-  # NOT add vexa-transcription — it would crash without whisper.
-
-  # ---------------------------------------------------------------------------
   # Ollama (local LLM, opt-in via COMPOSE_PROFILES=local-llm)
   # ---------------------------------------------------------------------------
   ollama:
-    image: ollama/ollama:0.6
+    image: ollama/ollama:0.21
     container_name: workforce0-ollama
     restart: unless-stopped
     profiles: ["local-llm"]

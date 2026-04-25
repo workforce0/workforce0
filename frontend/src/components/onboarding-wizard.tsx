@@ -160,6 +160,7 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
   const [meetingBotProvider, setMeetingBotProvider] =
     useState<MeetingBotChoice>("vexa");
   const [recallApiKey, setRecallApiKey] = useState<string>("");
+  const [vexaApiUrl, setVexaApiUrl] = useState<string>("");
   const [envHints, setEnvHints] = useState<Record<string, string> | null>(null);
   const [savingStep0, setSavingStep0] = useState(false);
   const [step0Error, setStep0Error] = useState<string | null>(null);
@@ -184,6 +185,8 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
         body: JSON.stringify({
           meetingBotProvider,
           recallApiKey: meetingBotProvider === "recall" ? recallApiKey : undefined,
+          vexaApiUrl:
+            meetingBotProvider === "vexa" && vexaApiUrl ? vexaApiUrl : undefined,
           localTier,
         }),
       });
@@ -383,6 +386,7 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
                   value={meetingBotProvider}
                   onChange={setMeetingBotProvider}
                   onRecallKey={setRecallApiKey}
+                  onVexaUrl={setVexaApiUrl}
                 />
 
                 <div className="flex items-center justify-between pt-2">

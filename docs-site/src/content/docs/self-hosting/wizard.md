@@ -32,7 +32,7 @@ At least one provider must be configured.
 
 Three options:
 
-- **Bundled (Vexa)** — adds ~310 MB RAM, no external account
+- **Vexa (BYO)** — self-hosted Vexa instance you run separately; set `VEXA_API_URL` in `.env` to point at it
 - **Recall.ai (BYOK)** — vendor-managed, ~$0.50/hour
 - **Skip** — manual upload only
 
@@ -45,7 +45,7 @@ Slack, Jira, GitHub, etc. Same as before.
 The wizard saves your choices and prints the `.env` keys you need plus the apply command:
 
 ```bash
-./bin/setup-finish.sh --profile meeting-bot --profile local-llm --profile local-stt
+./bin/setup-finish.sh --profile local-llm --profile local-stt
 ```
 
 Run that in your terminal. The wizard polls each service's `/health` and shows green checkmarks as they come up.
