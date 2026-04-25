@@ -58,8 +58,8 @@ describe('ModelRegistryService', () => {
   it('should fall back to defaults when tenant has no config', async () => {
     mockPrisma.agentConfig.findUnique.mockResolvedValue(null);
     const result = await service.resolveModel('tenant-1', 'ba_agent');
-    expect(result.modelId).toBe('gemini-2.0-flash-thinking');
-    expect(result.provider).toBe('google');
+    expect(result.modelId).toBe('claude-opus-4-7');
+    expect(result.provider).toBe('anthropic');
   });
 
   it('should seed default models for new tenant', async () => {
@@ -103,11 +103,11 @@ describe('ModelRegistryService', () => {
 
   it('should fall back to default reviewers when tenant has no config', async () => {
     mockPrisma.agentConfig.findUnique.mockResolvedValue(null);
-    const reviewers = await service.resolveReviewers('tenant-1', 'dev_agent');
+    const reviewers = await service.resolveReviewers('tenant-1', 'ba_agent');
     expect(reviewers).toHaveLength(2);
-    expect(reviewers[0].modelId).toBe('gemini-2.0-flash-thinking');
+    expect(reviewers[0].modelId).toBe('gemini-3.1-pro');
     expect(reviewers[0].provider).toBe('google');
-    expect(reviewers[1].modelId).toBe('o1');
+    expect(reviewers[1].modelId).toBe('gpt-5.5');
     expect(reviewers[1].provider).toBe('openai');
   });
 
@@ -185,9 +185,9 @@ describe('ModelRegistryService', () => {
 
   it('should return fallback chain starting with primary provider for supervisor', async () => {
     const chain = service.getFallbackChain('supervisor');
-    expect(chain[0].provider).toBe('google');
-    // fallback chain for google provider starts with anthropic, then openai
-    expect(chain[1].provider).toBe('anthropic');
+    expect(chain[0].provider).toBe('anthropic');
+    // fallback chain for anthropic provider starts with google, then openai, then ollama
+    expect(chain[1].provider).toBe('google');
     expect(chain[2].provider).toBe('openai');
   });
 
