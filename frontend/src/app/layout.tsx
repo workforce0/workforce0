@@ -10,8 +10,21 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Workforce0 — AI Team Platform",
-  description: "Your AI team that turns meetings into action",
+  title: "Workforce0 — AI workforce for product teams",
+  description: "Open-source, self-hosted AI workforce. Meetings in, shipped work out.",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icon-192.png",
+  },
+  openGraph: {
+    title: "Workforce0",
+    description: "Open-source, self-hosted AI workforce. Meetings in, shipped work out.",
+    images: [{ url: "/logo-full.png", width: 1610, height: 1440, alt: "Workforce0" }],
+  },
 };
 
 export default function RootLayout({

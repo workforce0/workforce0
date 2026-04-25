@@ -6,6 +6,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { AgentJobNotifier } from "@/components/agent-job-notifier";
 import { ProjectProvider } from "@/lib/project-context";
+import { BrandMark } from "@/components/brand-mark";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,11 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex items-center justify-center min-h-screen bg-canvas">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-amber flex items-center justify-center shadow-[0_0_24px_rgba(194,113,12,0.15)]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
+          <BrandMark size={40} priority className="shadow-[0_0_24px_rgba(124,58,237,0.20)]" />
           <div className="w-6 h-6 rounded-full border-2 border-ink-faint border-t-accent animate-spin" />
         </div>
       </div>

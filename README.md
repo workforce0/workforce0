@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" alt="Workforce0" width="120" height="120" />
+<img src="docs/assets/logo.png" alt="Workforce0" width="160" height="160" />
 
 # Workforce0
 

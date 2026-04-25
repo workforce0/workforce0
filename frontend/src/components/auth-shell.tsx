@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 
 interface AuthShellProps {
   children: ReactNode;
@@ -27,20 +28,7 @@ export function AuthShell({ children, minimal = false }: AuthShellProps) {
             className="relative flex items-center gap-3"
             aria-label="Workforce0 home"
           >
-            <div className="glow flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-accent to-violet">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-            </div>
+            <BrandMark size={40} priority className="glow" />
             <span className="font-display text-xl font-semibold tracking-tight">
               Workforce0
             </span>
@@ -76,20 +64,7 @@ export function AuthShell({ children, minimal = false }: AuthShellProps) {
             className={`mb-8 flex items-center justify-center gap-2.5 ${minimal ? "" : "lg:hidden"}`}
             aria-label="Workforce0 home"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-accent to-violet shadow-[0_0_16px_var(--color-accent-glow)]">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-            </div>
+            <BrandMark size={36} className="shadow-[0_0_16px_var(--color-accent-glow)]" />
             <span className="font-display text-xl font-semibold tracking-tight text-ink">
               Workforce0
             </span>

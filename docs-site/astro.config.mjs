@@ -10,10 +10,10 @@ export default defineConfig({
       description:
         "Self-hosted AI workforce — BYOK, open-source. Meetings in, shipped work out.",
       logo: {
-        light: "./src/assets/logo-light.svg",
-        dark: "./src/assets/logo-dark.svg",
+        src: "./src/assets/logo.png",
         replacesTitle: false,
       },
+      favicon: "/favicon.png",
       customCss: ["./src/styles/custom.css"],
       social: [
         {

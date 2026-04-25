@@ -26,6 +26,7 @@ import {
   FolderKanban,
   Network,
 } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { logout } from "@/lib/auth";
 import { ProjectSwitcher } from "@/components/project-switcher";
 
@@ -106,11 +107,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-between px-5 pt-6 pb-5">
         <div className="flex items-center gap-3">
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-amber flex items-center justify-center shadow-[0_0_20px_rgba(194,113,12,0.2)]">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
+          <BrandMark size={36} className="shadow-[0_0_20px_rgba(124,58,237,0.25)]" />
           <div>
             <span className="text-[15px] font-bold text-white tracking-tight">Workforce0</span>
           </div>

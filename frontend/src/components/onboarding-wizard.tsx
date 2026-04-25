@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Upload,
 } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -174,11 +175,7 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
             {step === 1 && (
               <div className="text-center space-y-6 animate-fade-in">
                 <div className="flex justify-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent to-amber flex items-center justify-center shadow-[0_0_32px_rgba(194,113,12,0.2)]">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                    </svg>
-                  </div>
+                  <BrandMark size={64} priority className="shadow-[0_0_32px_rgba(124,58,237,0.25)]" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-ink">
