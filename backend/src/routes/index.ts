@@ -92,6 +92,7 @@ import { googleIntegrationRoutes } from './google-integration.routes.js';
 import { integrationRoutes } from './integrations.routes.js';
 import { integrationsStatusRoutes } from './integrations-status.routes.js';
 import { setupRoutes as setupWizardRoutes } from './setup.routes.js';
+import { setupStep0Routes } from './setup-step0.routes.js';
 import { skillsRoutes } from './skills.routes.js';
 import { cronRoutes } from './cron.routes.js';
 import { architectRoutes } from './architect.routes.js';
@@ -241,6 +242,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       await apiInstance.register(integrationRoutes, { prefix: '/integrations' });
       await apiInstance.register(integrationsStatusRoutes);
       await apiInstance.register(setupWizardRoutes, { prefix: '/setup' });
+      await apiInstance.register(setupStep0Routes, { prefix: '/setup' });
       await apiInstance.register(skillsRoutes, { prefix: '/skills' });
       await apiInstance.register(cronRoutes, { prefix: '/cron' });
       await apiInstance.register(architectRoutes, { prefix: '/architect' });

@@ -118,6 +118,7 @@ import { HonchoMemoryProvider } from '../services/memory/honcho-memory-provider.
 import { ArchitectService } from '../services/agent/architect.service.js';
 import { LiveCaptureService } from '../services/meeting/live-capture.service.js';
 import { ModelRegistryService } from '../services/model-registry/model-registry.service.js';
+import { HardwareDetectService } from '../services/wizard/hardware-detect.service.js';
 
 /**
  * Build the MemoryManager with the always-on builtin provider + optional
@@ -424,6 +425,9 @@ export interface Services {
    *  /api/integrations/status) can probe feature URLs without
    *  re-importing the config module. */
   config: typeof config;
+
+  /** Step 0 wizard: detects host RAM/CPU and recommends a local-LLM tier. */
+  hardwareDetectService: HardwareDetectService;
 }
 
 /**
@@ -1276,6 +1280,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     meetingBotRouter,
     recallWebhookSecret: config.RECALL_WEBHOOK_SECRET,
     config,
+    hardwareDetectService: new HardwareDetectService(),
   };
 
   // Decorate Fastify instance with services
