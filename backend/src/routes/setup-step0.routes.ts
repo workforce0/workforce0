@@ -116,8 +116,18 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
       },
     });
 
+    // Log only non-sensitive metadata. We deliberately do not log envHints
+    // (or any derivative of parsed.data.recallApiKey) to satisfy CodeQL's
+    // taint analysis and avoid BYOK secrets ending up in log aggregators.
+    // The keys (e.g. RECALL_API_KEY) are static names — no secret material —
+    // but we still pass a hand-built whitelist instead of Object.keys(envHints)
+    // so the log statement has no data-flow dependency on user-supplied values.
+    const hintKeysLogged = profiles.slice();
+    if (envHints.VEXA_API_URL) hintKeysLogged.push('VEXA_API_URL');
+    if (envHints.RECALL_API_KEY) hintKeysLogged.push('RECALL_API_KEY');
+    if (envHints.OLLAMA_DEFAULT_MODEL) hintKeysLogged.push('OLLAMA_DEFAULT_MODEL');
     logger.info(
-      { tenantId, profiles, hintsCount: Object.keys(envHints).length },
+      { tenantId, profiles, hintKeys: hintKeysLogged },
       'Step 0 setup saved',
     );
     return reply.send({ success: true, data: { envHints, profiles } });

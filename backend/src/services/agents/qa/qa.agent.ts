@@ -45,7 +45,7 @@ export class QAAgent extends BaseConsultant {
         tools: createQATools({ prisma, commsRouter, memoryService }),
         maxSteps: 30,
         confidenceThreshold: 0.9,
-        defaultModel: { provider: 'anthropic', modelId: 'anthropic/claude-sonnet-4-6' },
+        defaultModel: { provider: 'anthropic', modelId: 'claude-sonnet-4-6' },
       },
       skillLoader,
       undefined,

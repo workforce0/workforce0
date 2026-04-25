@@ -90,15 +90,24 @@ export const logger: Logger = pino({
       }
     : undefined,
 
-  // Redact sensitive fields from logs
+  // Redact sensitive fields from logs.
+  // We list both common names and nested req.body.* paths so that even an
+  // accidental `logger.info({ body })` won't leak BYOK secrets.
   redact: {
     paths: [
       'password',
       'token',
       'apiKey',
       'authorization',
+      'recallApiKey',
+      'RECALL_API_KEY',
+      'envHints',
       'req.headers.authorization',
       'req.headers.cookie',
+      'req.body.recallApiKey',
+      'req.body.password',
+      'req.body.token',
+      'req.body.apiKey',
     ],
     remove: true,
   },

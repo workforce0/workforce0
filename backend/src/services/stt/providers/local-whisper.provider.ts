@@ -10,9 +10,24 @@ import type { STTProvider, STTProviderId, TranscribeInput, TranscribeResult } fr
 
 const logger = createChildLogger({ service: 'LocalWhisperProvider' });
 
+/** Base transcription timeout — 5 minutes is enough for most meeting
+ * recordings on CPU; GPU is far faster. The actual timeout is
+ * `LOCAL_WHISPER_BASE_TIMEOUT_MS * timeoutMult`. */
+const BASE_TRANSCRIBE_TIMEOUT_MS = 5 * 60 * 1000;
+
 export interface LocalWhisperProviderConfig {
   baseUrl: string | undefined;
-  /** Multiplier on estimated audio duration for the request timeout. */
+  /**
+   * Multiplier applied to the base 5-minute transcription timeout.
+   *
+   * Defaults to 2.0 (= 10 minutes), which is what the env-var docs imply.
+   * Bump it for slow CPUs or unusually long recordings; cut it back when
+   * you're running on GPU and want to fail fast on stuck workers.
+   *
+   * Note: this is NOT a multiplier on audio duration — we don't know the
+   * audio duration ahead of time (input is just bytes). If/when we estimate
+   * duration from file size, revisit this contract.
+   */
   timeoutMult?: number;
 }
 
@@ -42,9 +57,12 @@ export class LocalWhisperProvider implements STTProvider {
     if (input.language) form.append('language', input.language);
     if (input.domainPrompt) form.append('prompt', input.domainPrompt);
 
-    // We don't know the audio duration in advance; use a generous fixed timeout.
-    // 5 minutes covers most meeting recordings on CPU; GPU is much faster.
-    const timeoutMs = 5 * 60 * 1000;
+    // Apply the configured multiplier on the base timeout. Default 2.0
+    // gives operators a 10-minute ceiling, which clears most CPU-bound
+    // transcriptions while still failing fast on stuck workers.
+    const timeoutMs = Math.round(
+      BASE_TRANSCRIBE_TIMEOUT_MS * (this.config.timeoutMult ?? 2.0),
+    );
 
     const res = await fetch(`${this.config.baseUrl}/v1/audio/transcriptions`, {
       method: 'POST',

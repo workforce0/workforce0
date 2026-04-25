@@ -22,6 +22,20 @@ describe('ClientFactory', () => {
     expect(client.chat).toBeTypeOf('function');
   });
 
+  it('should create ollama client (OpenAI-compatible, default baseUrl)', () => {
+    // Ollama is wired into the union but routes through OpenAIClient with a
+    // pointed baseUrl. apiKey is optional for Ollama.
+    const client = createModelClient('ollama', { baseUrl: 'http://ollama:11434' });
+    expect(client).toBeDefined();
+    expect(client.chat).toBeTypeOf('function');
+  });
+
+  it('should create ollama client without explicit baseUrl (falls back to compose default)', () => {
+    const client = createModelClient('ollama', {});
+    expect(client).toBeDefined();
+    expect(client.chat).toBeTypeOf('function');
+  });
+
   it('should create custom client with baseUrl (uses OpenAI-compatible API)', () => {
     const client = createModelClient('custom', { apiKey: 'test', baseUrl: 'http://localhost:8080' });
     expect(client).toBeDefined();

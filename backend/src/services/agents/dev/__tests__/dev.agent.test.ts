@@ -29,7 +29,7 @@ describe('DevAgent', () => {
 
     mockModelRegistry = {
       resolveModel: vi.fn().mockResolvedValue({
-        modelId: 'anthropic/claude-sonnet-4-6',
+        modelId: 'claude-sonnet-4-6',
         provider: 'anthropic',
         confidenceThreshold: 0.9,
         maxSteps: 50,
@@ -97,7 +97,7 @@ describe('DevAgent', () => {
 
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'anthropic/claude-sonnet-4-6',
+        model: 'claude-sonnet-4-6',
       }),
     );
   });
@@ -432,7 +432,7 @@ describe('DevAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'anthropic/claude-sonnet-4-6',
+        model: 'claude-sonnet-4-6',
       }),
     );
   });
@@ -466,7 +466,7 @@ describe('DevAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'anthropic/claude-sonnet-4-6',
+        model: 'claude-sonnet-4-6',
       }),
     );
   });
