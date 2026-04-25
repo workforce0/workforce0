@@ -134,17 +134,30 @@ Options:
 
 ## What about email / WhatsApp / Teams?
 
-Different surface, mostly the same three buttons:
+Different surface, same outcome — only the reply syntax differs by
+channel:
 
-- **WhatsApp** — Twilio-integrated; reply with `approve`, `redirect`,
-  `pause` (case-insensitive). Two-way.
-- **Email** — flag-driven, text-based approvals (`Reply "approve"`).
-  Two-way.
-- **Google Chat** — cards, same shape as Slack. Two-way.
+- **Slack** — buttons on the message; if buttons aren't available
+  (older client, screen-reader, etc.) reply `approve <token>` /
+  `reject <token>` in-thread. Two-way.
+- **WhatsApp** — Twilio-integrated; reply
+  `APPROVE <12-hex-token>` or `REJECT <12-hex-token> [reason]`
+  (case-insensitive, the short forms `A` / `R` work too). Plain
+  `approve` without a token gets a help message back. Two-way.
+- **Email** — reply with the same `APPROVE <token>` /
+  `REJECT <token>` shape. The token is in the message body and
+  also on a dedicated `In-Reply-To` mailbox. Two-way.
+- **Google Chat** — cards, same shape as Slack (buttons + tokenized
+  reply fallback). Two-way.
 - **Microsoft Teams** — **one-way notifications only today.** An
   Adaptive Card is posted via incoming webhook; there's no inbound
   message route yet, so there's no reply-to-approve. Tap through to
   the web UI to act on a Teams notification. Two-way Teams
   approvals are on the roadmap.
+
+The token is single-use, expires after 7 days, and is the same
+across all channels — so if a brief was DM'd to you on both Slack
+and WhatsApp, replying on either one resolves the approval and the
+other channel's prompt becomes a no-op.
 
 All two-way channels route to the same underlying approval API.

@@ -15,8 +15,19 @@ export const metadata: Metadata = {
   // unfurls). Without it, Next falls back to localhost:3000 in
   // production builds and OG images break on every share. Override at
   // build time with NEXT_PUBLIC_SITE_URL when deploying behind a
-  // different origin.
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://workforce0.com'),
+  // different origin. We catch malformed values rather than throwing
+  // during module evaluation (which would break build/start).
+  metadataBase: (() => {
+    const fallback = "https://workforce0.com";
+    const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() || fallback;
+    try {
+      return new URL(raw);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.warn(`Invalid NEXT_PUBLIC_SITE_URL=${raw}; falling back to ${fallback}`);
+      return new URL(fallback);
+    }
+  })(),
   title: "Workforce0 — AI workforce for product teams",
   description: "Open-source, self-hosted AI workforce. Meetings in, shipped work out.",
   icons: {

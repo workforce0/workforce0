@@ -420,40 +420,76 @@ export async function agentRoutes(fastify: FastifyInstance): Promise<void> {
 
           if (engagement) {
             engagementId = engagement.id;
-            // The engagement-path used to call advancePhase('build') and
-            // rely on engagement.service.dispatchAgentForPhase to enqueue
-            // the dev job. That path enqueued without ticketId/taskId,
-            // and the DEV_AGENT_PROCESS handler then tried to update a
-            // non-existent ticket → prisma error → orphaned job. We now
-            // create the dev_agent ticket here (mirroring the
-            // no-engagement branch below) and pass the resulting IDs to
-            // advancePhase via output, so dispatchAgentForPhase can
-            // forward them to the job. See task #188.
-            const created = await fastify.services.ticketService.createAsNewWork({
-              tenantId,
-              roleSlug: 'dev_agent',
-              title: `Implement PRD ${id}`,
-              agentTaskInput: { type: 'prd_implementation', prdId: id },
-              payload: { type: 'prd_implementation', prdId: id },
+            // Idempotency: if a dev_agent ticket already exists for
+            // this PRD (re-approval, retry, two clicks), reuse it
+            // instead of minting a duplicate.
+            const existingDev = await (fastify.services.prisma as any).ticket.findFirst({
+              where: {
+                tenantId,
+                roleSlug: 'dev_agent',
+                payload: { path: ['prdId'], equals: id },
+                status: { notIn: ['cancelled', 'failed'] },
+              },
+              select: { id: true, status: true },
             });
-
-            // Advance from 'approve' to 'build'
-            await engagementService.advancePhase(tenantId, engagement.id, {
-              confidence: 1.0,
-              targetPhase: 'build' as any,
-              output: {
+            if (existingDev) {
+              logger.info('Dev work already in flight for PRD — skipping duplicate dispatch', {
                 prdId: id,
-                approvedAt: new Date().toISOString(),
+                existingTicketId: existingDev.id,
+                existingStatus: existingDev.status,
+              });
+            } else {
+              // The engagement-path used to call advancePhase('build') and
+              // rely on engagement.service.dispatchAgentForPhase to enqueue
+              // the dev job. That path enqueued without ticketId/taskId,
+              // and the DEV_AGENT_PROCESS handler then tried to update a
+              // non-existent ticket → prisma error → orphaned job. We now
+              // create the dev_agent ticket here (mirroring the
+              // no-engagement branch below) and pass the resulting IDs to
+              // advancePhase via output, so dispatchAgentForPhase can
+              // forward them to the job. See task #188.
+              const created = await fastify.services.ticketService.createAsNewWork({
+                tenantId,
+                roleSlug: 'dev_agent',
+                title: `Implement PRD ${id}`,
+                agentTaskInput: { type: 'prd_implementation', prdId: id },
+                payload: { type: 'prd_implementation', prdId: id },
+              });
+
+              // Advance from 'approve' to 'build'. If this throws, cancel
+              // the freshly-minted ticket+task so a retry doesn't leave
+              // an orphan + a duplicate dispatch attempt.
+              try {
+                await engagementService.advancePhase(tenantId, engagement.id, {
+                  confidence: 1.0,
+                  targetPhase: 'build' as any,
+                  output: {
+                    prdId: id,
+                    approvedAt: new Date().toISOString(),
+                    taskId: created.agentTaskId,
+                    ticketId: created.ticket.id,
+                  },
+                });
+              } catch (advanceErr) {
+                try {
+                  await (fastify.services.prisma as any).ticket.update({
+                    where: { id: created.ticket.id },
+                    data: { status: 'cancelled', error: 'advancePhase failed after ticket creation' },
+                  });
+                  await (fastify.services.prisma as any).agentTask.update({
+                    where: { id: created.agentTaskId },
+                    data: { status: 'failed', error: 'advancePhase failed after task creation' },
+                  });
+                } catch { /* best-effort */ }
+                throw advanceErr;
+              }
+              logger.info('Engagement advanced to build phase', {
+                engagementId: engagement.id,
+                prdId: id,
                 taskId: created.agentTaskId,
                 ticketId: created.ticket.id,
-              },
-            });
-            logger.info('Engagement advanced to build phase', {
-              engagementId: engagement.id,
-              prdId: id,
-              taskId: created.agentTaskId,
-              ticketId: created.ticket.id,
-            });
+              });
+            }
           }
         }
 

@@ -507,22 +507,38 @@ export function createProcessors(deps: ProcessorDependencies) {
         return;
       }
 
-      // Create an engagement for this completed meeting via the Supervisor flow.
-      // The id is captured on the outer scope so we can advance phases after
-      // the BA agent finishes (see "Engagement phase advancement" below).
+      // Create or reuse an engagement for this completed meeting. BullMQ may
+      // retry MEETING_PROCESS jobs, and a duplicate enqueue would otherwise
+      // produce two active engagements for the same meeting — the
+      // approve-time "find latest active engagement by meetingId" lookup
+      // would then resolve non-deterministically. We look for an existing
+      // active engagement first and reuse it on retries.
       let createdEngagementId: string | null = null;
       try {
-        const engagement = await engagementService.create(tenantId, {
-          title: meeting.title || `Meeting ${meetingId}`,
-          meetingId,
+        const existing = await (engagementService as any).prisma?.engagement?.findFirst?.({
+          where: { tenantId, meetingId, status: 'active' },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true },
         });
-        createdEngagementId = engagement.id;
-        logger.info('Engagement created for completed meeting', {
-          engagementId: engagement.id,
-          meetingId,
-        });
+        if (existing?.id) {
+          createdEngagementId = existing.id;
+          logger.info('Reusing existing active engagement for meeting', {
+            engagementId: existing.id,
+            meetingId,
+          });
+        } else {
+          const engagement = await engagementService.create(tenantId, {
+            title: meeting.title || `Meeting ${meetingId}`,
+            meetingId,
+          });
+          createdEngagementId = engagement.id;
+          logger.info('Engagement created for completed meeting', {
+            engagementId: engagement.id,
+            meetingId,
+          });
+        }
       } catch (engagementError) {
-        logger.error('Failed to create engagement for meeting', {
+        logger.error('Failed to create or reuse engagement for meeting', {
           meetingId,
           error: (engagementError as Error).message,
         });

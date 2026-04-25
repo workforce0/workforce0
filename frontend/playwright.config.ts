@@ -1,6 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3001';
+// Treat empty-string env vars as unset. `??` only falls back on
+// `undefined`/`null`, so `PLAYWRIGHT_BASE_URL=""` would otherwise
+// produce an empty baseURL and tests would silently target the empty
+// string.
+const envURL = process.env.PLAYWRIGHT_BASE_URL?.trim();
+const baseURL = envURL && envURL.length > 0 ? envURL : 'http://localhost:3001';
 const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEB_SERVER === '1';
 
 export default defineConfig({

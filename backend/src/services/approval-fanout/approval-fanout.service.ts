@@ -279,6 +279,29 @@ export class ApprovalFanoutService {
       return;
     }
 
+    // Idempotency guard: if a dev_agent ticket already exists for this
+    // PRD (because a previous reply already kicked off implementation,
+    // or two webhook deliveries raced through the token-consume window),
+    // don't mint another one. Without this guard, the second call would
+    // create a duplicate Ticket + AgentTask + queue job and the daemon
+    // would do the same work twice.
+    const existingDev = await (this.prisma as any).ticket.findFirst({
+      where: {
+        tenantId,
+        roleSlug: 'dev_agent',
+        payload: { path: ['prdId'], equals: prdId },
+        status: { notIn: ['cancelled', 'failed'] },
+      },
+      select: { id: true, status: true },
+    });
+    if (existingDev) {
+      this.logger.info(
+        { prdId, existingTicketId: existingDev.id, existingStatus: existingDev.status },
+        'Dev work already in flight for this PRD — skipping duplicate dispatch',
+      );
+      return;
+    }
+
     // Find the engagement linked to this PRD's meeting (if any).
     const prdRecord = await this.prisma.pRD.findUnique({
       where: { id: prdId },

@@ -366,9 +366,9 @@ Not every role needs a frontier model. Put your API dollars into the **planner**
 
 > **Not supported.** Running the planner or any LLM workload through your personal **Claude Pro** or **ChatGPT Plus** subscription via a scripted wrapper violates both providers' Terms of Service. BYOK API keys are the path; local models (Ollama / LM Studio / vLLM) are the path; subscription scraping isn't.
 
-**Zero-cost path:** local models for specialists + free-tier Gemini for the planner. See [`docs/byok.md`](./docs/byok.md) for the Ollama quickstart.
+**Zero-cost path:** local models for specialists + free-tier Gemini for the planner. See the [BYOK section in the docs site](https://docs.workforce0.com/byok/overview/) for the Ollama quickstart.
 
-Full provider list and setup walkthroughs: [`docs/byok.md`](./docs/byok.md).
+Full provider list and setup walkthroughs: the [BYOK section in the docs site](https://docs.workforce0.com/byok/overview/).
 
 ---
 
