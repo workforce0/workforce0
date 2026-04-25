@@ -134,12 +134,17 @@ Options:
 
 ## What about email / WhatsApp / Teams?
 
-Same three buttons, different surface:
+Different surface, mostly the same three buttons:
 
 - **WhatsApp** — Twilio-integrated; reply with `approve`, `redirect`,
-  `pause` (case-insensitive).
-- **Microsoft Teams** — Adaptive Cards with the same three buttons.
+  `pause` (case-insensitive). Two-way.
 - **Email** — flag-driven, text-based approvals (`Reply "approve"`).
-- **Google Chat** — cards, same shape as Slack.
+  Two-way.
+- **Google Chat** — cards, same shape as Slack. Two-way.
+- **Microsoft Teams** — **one-way notifications only today.** An
+  Adaptive Card is posted via incoming webhook; there's no inbound
+  message route yet, so there's no reply-to-approve. Tap through to
+  the web UI to act on a Teams notification. Two-way Teams
+  approvals are on the roadmap.
 
-All route to the same underlying approval API.
+All two-way channels route to the same underlying approval API.

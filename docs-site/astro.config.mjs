@@ -87,6 +87,7 @@ export default defineConfig({
             { label: "Slack", slug: "integrations/slack" },
             { label: "GitHub", slug: "integrations/github" },
             { label: "Twilio (voice)", slug: "integrations/twilio" },
+            { label: "WhatsApp", slug: "integrations/whatsapp" },
           ],
         },
         {

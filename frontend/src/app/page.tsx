@@ -568,7 +568,7 @@ function FeatureGrid() {
     {
       icon: <GitBranch className="w-5 h-5" aria-hidden />,
       title: "Project graph",
-      body: "Native AST extraction across TS, JS, Python. God-nodes feed the planner so decompositions target the parts of the repo that matter.",
+      body: "Full TS/JS AST plus a regex-based Python extractor (Go, Rust, Java on the way). God-nodes feed the planner so decompositions target the parts of the repo that matter.",
     },
     {
       icon: <ShieldCheck className="w-5 h-5" aria-hidden />,
