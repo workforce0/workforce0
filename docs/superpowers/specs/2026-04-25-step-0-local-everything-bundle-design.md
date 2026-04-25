@@ -229,7 +229,7 @@ Only BA/QA/Supervisor have critique loops; all bounded ≤ 2.
 > **Status update (2026-04-25):** Vexa bundling has been deferred — the spec's
 > claims about a `meeting-bot` Compose profile are aspirational. The provider
 > abstraction (this section's main contribution) is shipped, and `VexaProvider`
-> works against any Vexa instance the user runs separately. See issue #TBD for
+> works against any Vexa instance the user runs separately. See [issue #36](https://github.com/workforce0/workforce0/issues/36) for
 > the real bundling work.
 
 One interface, three implementations. All feed the same downstream pipeline (engagement creation, BA agent dispatch).
@@ -303,7 +303,7 @@ DI container wires the router into existing `/api/meetings/schedule` and bot-eve
 > **Status update (2026-04-25):** Vexa bundling has been deferred — the spec's
 > claims about a `meeting-bot` Compose profile are aspirational. The provider
 > abstraction (§6's main contribution) is shipped, and `VexaProvider` works
-> against any Vexa instance the user runs separately. See issue #TBD for the
+> against any Vexa instance the user runs separately. See [issue #36](https://github.com/workforce0/workforce0/issues/36) for the
 > real bundling work.
 
 We bundle Vexa's full compose (api + bot-manager + transcription + socket proxy), reusing Workforce0's Postgres and Redis instances. We deliberately *don't* use Vexa's "lite" config (single-Chrome, ephemeral Redis) because of known stability issues there.

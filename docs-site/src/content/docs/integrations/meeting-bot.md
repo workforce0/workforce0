@@ -27,7 +27,7 @@ Workforce0's `VexaProvider` calls the following endpoints on the configured URL:
 
 > **Caveat:** these endpoints reflect Workforce0's **expected contract** with Vexa. Vexa's actual API surface may have drifted — verify against [Vexa's docs](https://github.com/Vexa-ai/vexa) before relying on this in production. If your Vexa version exposes differently-named routes, the abstraction is small enough to fork — see `backend/src/services/meeting-bot/providers/vexa.provider.ts`.
 
-Tracking issue for first-class bundling work: [#TBD](https://github.com/workforce0/workforce0/issues).
+Tracking issue for first-class bundling work: [#36](https://github.com/workforce0/workforce0/issues/36).
 
 ## Option 2 — Recall.ai (BYOK)
 
