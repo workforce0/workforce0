@@ -20,10 +20,18 @@ vi.mock('../../../lib/logger.js', () => ({
   }),
 }));
 
-const SECRET = 'test-secret';
+// Recall.ai uses Svix for webhook delivery. Secrets look like `whsec_<base64>`.
+// We use a fixed base64 here so the test signature is deterministic.
+const RAW_SECRET_B64 = Buffer.from('test-secret-bytes').toString('base64');
+const SECRET = `whsec_${RAW_SECRET_B64}`;
 
-function signBody(body: string, secret: string): string {
-  return crypto.createHmac('sha256', secret).update(body).digest('hex');
+function svixSign(svixId: string, svixTimestamp: string, body: string, secret: string): string {
+  const secretBytes = secret.startsWith('whsec_')
+    ? Buffer.from(secret.slice('whsec_'.length), 'base64')
+    : Buffer.from(secret, 'utf8');
+  const payload = `${svixId}.${svixTimestamp}.${body}`;
+  const sig = crypto.createHmac('sha256', secretBytes).update(payload).digest('base64');
+  return `v1,${sig}`;
 }
 
 function buildApp(): FastifyInstance {
@@ -52,7 +60,7 @@ describe('Recall webhook route', () => {
     await app.ready();
   });
 
-  it('rejects requests without a signature header', async () => {
+  it('rejects requests missing svix headers', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/webhooks/meeting-bot/recall',
@@ -62,24 +70,57 @@ describe('Recall webhook route', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('rejects requests with a wrong signature', async () => {
+  it('rejects requests with a wrong svix-signature', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/webhooks/meeting-bot/recall',
       payload: '{"event":"x"}',
-      headers: { 'content-type': 'application/json', 'x-recall-signature': 'wrong' },
+      headers: {
+        'content-type': 'application/json',
+        'svix-id': 'msg_1',
+        'svix-timestamp': '1700000000',
+        'svix-signature': 'v1,d3JvbmctYmFzZTY0LXNpZw==',
+      },
     });
     expect(res.statusCode).toBe(401);
   });
 
-  it('accepts correctly-signed requests and dispatches the event', async () => {
+  it('accepts correctly-signed (Svix v1 base64) requests and dispatches the event', async () => {
     const body = '{"event":"bot.transcript_ready","data":{"bot_id":"b1"}}';
-    const sig = signBody(body, SECRET);
+    const svixId = 'msg_abc';
+    const svixTimestamp = '1700000000';
+    const sig = svixSign(svixId, svixTimestamp, body, SECRET);
     const res = await app.inject({
       method: 'POST',
       url: '/webhooks/meeting-bot/recall',
       payload: body,
-      headers: { 'content-type': 'application/json', 'x-recall-signature': sig },
+      headers: {
+        'content-type': 'application/json',
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': sig,
+      },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('accepts when ANY of the space-separated v1 signatures match (rotation case)', async () => {
+    const body = '{"event":"bot.transcript_ready","data":{"bot_id":"b1"}}';
+    const svixId = 'msg_def';
+    const svixTimestamp = '1700000001';
+    const goodSig = svixSign(svixId, svixTimestamp, body, SECRET);
+    // Combine a bad signature with the good one — the good one wins.
+    const combined = `v1,d3Jvbmc= ${goodSig}`;
+    const res = await app.inject({
+      method: 'POST',
+      url: '/webhooks/meeting-bot/recall',
+      payload: body,
+      headers: {
+        'content-type': 'application/json',
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': combined,
+      },
     });
     expect(res.statusCode).toBe(200);
   });
@@ -91,7 +132,12 @@ describe('Recall webhook route', () => {
       method: 'POST',
       url: '/webhooks/meeting-bot/recall',
       payload: '{}',
-      headers: { 'content-type': 'application/json', 'x-recall-signature': 'whatever' },
+      headers: {
+        'content-type': 'application/json',
+        'svix-id': 'msg_1',
+        'svix-timestamp': '1',
+        'svix-signature': 'v1,whatever',
+      },
     });
     expect(res.statusCode).toBe(503);
   });

@@ -70,12 +70,83 @@ describe('RecallProvider', () => {
     );
   });
 
-  it('getTranscript returns null when bot has no transcript yet', async () => {
+  it('getTranscript returns null when bot is still recording', async () => {
+    // status_changes shows "recording" — not yet done. We expect the
+    // provider to return null so the caller polls again later.
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'bot-abc', media_retention_end: null, transcript: null }), { status: 200 }),
+      new Response(
+        JSON.stringify({
+          id: 'bot-abc',
+          status_changes: [{ code: 'joining_call' }, { code: 'recording' }],
+          recordings: [],
+        }),
+        { status: 200 },
+      ),
     );
     const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
     await expect(p.getTranscript('bot-abc')).resolves.toBeNull();
+  });
+
+  it('getTranscript returns null when done but no recordings yet', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: 'bot-abc',
+          status_changes: [{ code: 'done' }],
+          recordings: [],
+        }),
+        { status: 200 },
+      ),
+    );
+    const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
+    await expect(p.getTranscript('bot-abc')).resolves.toBeNull();
+  });
+
+  it('getTranscript throws (not implemented) when transcript download_url is available', async () => {
+    // Recall's documented shape:
+    //   recordings[0].media_shortcuts.transcript.data.download_url
+    // We deliberately don't pretend to parse the download_url payload until
+    // we can verify its shape against a live Recall account — throw loudly.
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: 'bot-abc',
+          status_changes: [{ code: 'done' }],
+          recordings: [
+            {
+              media_shortcuts: {
+                transcript: {
+                  data: { download_url: 'https://recall.example/transcript.json' },
+                },
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
+    await expect(p.getTranscript('bot-abc')).rejects.toThrow(/not yet implemented/);
+  });
+
+  it('isAvailable caches positive result for repeated calls', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('[]', { status: 200 }));
+    const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
+    await expect(p.isAvailable()).resolves.toBe(true);
+    await expect(p.isAvailable()).resolves.toBe(true);
+    await expect(p.isAvailable()).resolves.toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('isAvailable cache can be cleared via clearAvailabilityCache (test seam)', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('[]', { status: 200 }))
+      .mockResolvedValueOnce(new Response('[]', { status: 200 }));
+    const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
+    await expect(p.isAvailable()).resolves.toBe(true);
+    p.clearAvailabilityCache();
+    await expect(p.isAvailable()).resolves.toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('honors a custom baseUrl override (regional endpoints)', async () => {

@@ -1,5 +1,14 @@
 /**
- * Recall.ai webhook route. HMAC-validated via x-recall-signature header.
+ * Recall.ai webhook route.
+ *
+ * Recall.ai delivers webhooks via Svix, so the signature scheme follows Svix's
+ * spec (https://docs.recall.ai/docs/webhooks):
+ *   - Headers: `svix-id`, `svix-timestamp`, `svix-signature`
+ *   - Signed payload: `${svix-id}.${svix-timestamp}.${rawBody}`
+ *   - Secret: stored as `whsec_<base64>`. Decode the base64 portion, then
+ *     HMAC-SHA256 the signed payload and base64-encode the result.
+ *   - Header value: space-separated `v1,<base64sig>` entries — any one of
+ *     them matching is sufficient (lets Recall rotate secrets safely).
  *
  * @module routes/webhooks/meeting-bot-recall
  */
@@ -9,6 +18,18 @@ import crypto from 'node:crypto';
 import { createChildLogger } from '../../lib/logger.js';
 
 const logger = createChildLogger({ service: 'RecallWebhook' });
+
+/**
+ * Decode the secret portion of a Svix-style `whsec_<base64>` secret. Plain
+ * (legacy) secrets are accepted as-is — useful for self-hosted operators
+ * who configured a raw HMAC secret before Recall moved to Svix.
+ */
+function decodeWebhookSecret(secret: string): Buffer {
+  if (secret.startsWith('whsec_')) {
+    return Buffer.from(secret.slice('whsec_'.length), 'base64');
+  }
+  return Buffer.from(secret, 'utf8');
+}
 
 export async function meetingBotRecallWebhookRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/recall', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -26,8 +47,17 @@ export async function meetingBotRecallWebhookRoutes(fastify: FastifyInstance): P
       });
     }
 
-    const sig = request.headers['x-recall-signature'];
-    if (typeof sig !== 'string' || sig.length === 0) {
+    const svixId = request.headers['svix-id'];
+    const svixTimestamp = request.headers['svix-timestamp'];
+    const svixSignature = request.headers['svix-signature'];
+    if (
+      typeof svixId !== 'string' ||
+      typeof svixTimestamp !== 'string' ||
+      typeof svixSignature !== 'string' ||
+      svixId.length === 0 ||
+      svixTimestamp.length === 0 ||
+      svixSignature.length === 0
+    ) {
       return reply.status(401).send({ success: false, error: { code: 'MISSING_SIGNATURE' } });
     }
 
@@ -37,11 +67,33 @@ export async function meetingBotRecallWebhookRoutes(fastify: FastifyInstance): P
       return reply.status(500).send({ success: false, error: { code: 'RAW_BODY_MISSING' } });
     }
 
-    const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-    if (
-      sig.length !== expected.length ||
-      !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
-    ) {
+    const signedPayload = `${svixId}.${svixTimestamp}.${rawBody}`;
+    const secretBytes = decodeWebhookSecret(secret);
+    const expected = crypto
+      .createHmac('sha256', secretBytes)
+      .update(signedPayload)
+      .digest('base64');
+    const expectedBuf = Buffer.from(expected, 'base64');
+
+    // Svix sends one or more space-separated `v1,<base64sig>` pairs.
+    const candidateSigs = svixSignature
+      .split(' ')
+      .map((entry) => entry.split(','))
+      .filter((parts) => parts[0] === 'v1' && typeof parts[1] === 'string' && parts[1].length > 0)
+      .map((parts) => parts[1] as string);
+
+    const valid = candidateSigs.some((sig) => {
+      let buf: Buffer;
+      try {
+        buf = Buffer.from(sig, 'base64');
+      } catch {
+        return false;
+      }
+      if (buf.length !== expectedBuf.length) return false;
+      return crypto.timingSafeEqual(buf, expectedBuf);
+    });
+
+    if (!valid) {
       logger.warn({ ip: request.ip }, 'Recall webhook signature mismatch');
       return reply.status(401).send({ success: false, error: { code: 'BAD_SIGNATURE' } });
     }
