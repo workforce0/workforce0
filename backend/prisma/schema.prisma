@@ -40,8 +40,34 @@ model Tenant {
   scheduledJobs          ScheduledJob[]
   goals                  Goal[]
   projects               Project[]
+  tenantSettings         TenantSettings?
 
   @@map("tenants")
+}
+
+// ============================================================
+// TenantSettings (per-tenant operational preferences)
+// ============================================================
+//
+// Strongly-typed sibling to Tenant.settings (Json). Use this model
+// for fields that need to be queried, indexed, or referenced by FK.
+// Keep loose/experimental settings in Tenant.settings until they
+// stabilize, then promote them here.
+//
+// One row per tenant; created lazily on first write. Routes that
+// read these fields should treat absent rows as "use defaults".
+
+model TenantSettings {
+  id                   String   @id @default(cuid())
+  tenantId             String   @unique
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Selected meeting-bot provider. One of "vexa" | "recall" | "manual".
+  /// Null = use router default (preferred provider for this install).
+  meetingBotProviderId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("tenant_settings")
 }
 
 // ============================================================
