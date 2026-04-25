@@ -28,6 +28,7 @@
  */
 
 import { createChildLogger } from '../../lib/logger.js';
+import type { STTProviderRouter } from '../stt/stt-router.service.js';
 
 const logger = createChildLogger({ service: 'TranscriptionService' });
 
@@ -109,24 +110,41 @@ interface WhisperApiResponse {
  */
 export class TranscriptionService {
   private readonly apiKey: string;
+  private readonly sttRouter?: STTProviderRouter;
 
-  constructor(openaiApiKey: string) {
+  /**
+   * @param openaiApiKey - OpenAI API key for the legacy direct path. Pass an
+   *   empty string when delegating to an `sttRouter` that already wraps the
+   *   provider chain.
+   * @param sttRouter - Optional router that delegates to the configured STT
+   *   chain (local Whisper → OpenAI). When present, the per-chunk single-shot
+   *   call goes through the router instead of calling OpenAI directly. The
+   *   chunking loop (for files >24 MB) is retained either way to keep the
+   *   OpenAI 25 MB upload limit from breaking large meetings.
+   */
+  constructor(openaiApiKey: string, sttRouter?: STTProviderRouter) {
     this.apiKey = openaiApiKey;
+    this.sttRouter = sttRouter;
 
-    if (this.apiKey) {
-      logger.info('TranscriptionService initialized');
+    if (this.sttRouter) {
+      logger.info('TranscriptionService initialized (STTProviderRouter delegation)');
+    } else if (this.apiKey) {
+      logger.info('TranscriptionService initialized (legacy OpenAI direct path)');
     } else {
-      logger.warn('TranscriptionService disabled: no OpenAI API key provided');
+      logger.warn('TranscriptionService disabled: no OpenAI API key and no STTProviderRouter');
     }
   }
 
   /**
-   * Check if the service is enabled (API key is configured).
+   * Check if the service is enabled.
    *
-   * @returns true if the API key is set
+   * Enabled when either an STTProviderRouter is wired (it owns provider
+   * availability) or a legacy OpenAI API key is set.
+   *
+   * @returns true if the service can transcribe
    */
   isEnabled(): boolean {
-    return !!this.apiKey;
+    return !!this.sttRouter || !!this.apiKey;
   }
 
   /**
@@ -198,6 +216,7 @@ export class TranscriptionService {
       filename,
       sizeBytes: audioBuffer.length,
       mimeType,
+      delegate: this.sttRouter ? 'router' : 'openai-direct',
     });
 
     const chunks = this.calculateChunks(audioBuffer.length);
@@ -223,7 +242,7 @@ export class TranscriptionService {
         end: chunk.end,
       });
 
-      const response = await this.callWhisperApi(
+      const response = await this.transcribeChunkSingleShot(
         chunkBuffer,
         filename,
         resolvedMimeType,
@@ -281,6 +300,45 @@ export class TranscriptionService {
     });
 
     return result;
+  }
+
+  /**
+   * Transcribe a single audio chunk via the configured path.
+   *
+   * When an `STTProviderRouter` is wired the router owns the provider
+   * fallback chain (local Whisper → OpenAI → …). Otherwise we fall back
+   * to the legacy direct OpenAI Whisper call so existing installs that
+   * never set up the router keep working.
+   *
+   * The `domainPrompt` is only forwarded when calling OpenAI directly —
+   * the router's `TranscribeInput` shape doesn't carry it yet (intentional,
+   * Plan 2 keeps the router shape minimal). Domain-prompt support across
+   * providers can be added in a follow-up without changing this contract.
+   */
+  private async transcribeChunkSingleShot(
+    chunkBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+    domainPrompt?: string,
+  ): Promise<WhisperApiResponse> {
+    if (this.sttRouter) {
+      const result = await this.sttRouter.transcribe({
+        audio: new Uint8Array(chunkBuffer),
+        filename,
+      });
+      return {
+        text: result.text,
+        language: result.language,
+        duration: result.durationSec,
+        segments: result.segments.map((s, idx) => ({
+          id: idx,
+          start: s.start,
+          end: s.end,
+          text: s.text,
+        })),
+      };
+    }
+    return this.callWhisperApi(chunkBuffer, filename, mimeType, domainPrompt);
   }
 
   /**

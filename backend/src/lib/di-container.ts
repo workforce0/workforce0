@@ -218,6 +218,14 @@ import { EscalationService } from '../services/escalation/escalation.service.js'
 import { TranscriptionService } from '../services/transcription/transcription.service.js';
 import { DomainPromptBuilder } from '../services/transcription/domain-prompt.js';
 
+// STT (provider-agnostic speech-to-text — routes to local Whisper / OpenAI / …)
+import {
+  STTProviderRouter,
+  LocalWhisperProvider,
+  OpenAIWhisperProvider,
+  type STTProviderId,
+} from '../services/stt/index.js';
+
 // Google OAuth (per-user Google Meet integration)
 import { GoogleOAuthService } from '../services/integrations/google-oauth.service.js';
 
@@ -387,7 +395,11 @@ export interface Services {
 
   // Meeting ingestion services
   storageService: StorageService;                   // Local filesystem by default; S3 when AWS_S3_BUCKET set
-  transcriptionService: TranscriptionService | null; // null if OpenAI key not set
+  transcriptionService: TranscriptionService | null; // null if no STT provider is configured (no OpenAI key + no local Whisper)
+  /** Provider-agnostic STT router (Plan 2). Wraps local Whisper + OpenAI
+   *  Whisper. Always set, even when no providers are configured — the
+   *  wizard's status indicator polls this in Plan 3. */
+  sttRouter: STTProviderRouter;
   /** PG.7: builds domain-aware Whisper prompts from tenant corpus
    *  (god nodes + skills + recent PRD titles). Credit:
    *  safishamsi/graphify. */
@@ -891,14 +903,43 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   });
   logger.info('Storage service initialized', { driver: storageService.driver });
 
-  const transcriptionService = config.OPENAI_API_KEY
-    ? new TranscriptionService(config.OPENAI_API_KEY)
+  // STTProviderRouter (Plan 2): owns the local-Whisper → OpenAI chain.
+  // Each provider stays disabled until its config is set (URL/api key),
+  // so wiring the router unconditionally is safe — `isAvailable()` per
+  // provider gates real calls.
+  const sttChain = config.STT_PROVIDER_CHAIN
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0) as STTProviderId[];
+  const sttRouter = new STTProviderRouter(
+    [
+      new LocalWhisperProvider({
+        baseUrl: config.WHISPER_BASE_URL,
+        timeoutMult: config.WHISPER_TIMEOUT_MULT,
+      }),
+      new OpenAIWhisperProvider({ apiKey: config.OPENAI_API_KEY }),
+    ],
+    sttChain,
+  );
+  logger.info('STTProviderRouter initialized', {
+    chain: sttChain,
+    localWhisperConfigured: !!config.WHISPER_BASE_URL,
+    openaiConfigured: !!config.OPENAI_API_KEY,
+  });
+
+  // TranscriptionService keeps the chunking/merge pipeline; per-chunk
+  // single-shot calls now go through the router. The legacy direct path
+  // is preserved for the no-key + no-router case (router is always wired,
+  // so the legacy path in practice is only used by tests).
+  const sttConfigured = !!config.OPENAI_API_KEY || !!config.WHISPER_BASE_URL;
+  const transcriptionService = sttConfigured
+    ? new TranscriptionService(config.OPENAI_API_KEY ?? '', sttRouter)
     : null;
 
   if (!transcriptionService) {
-    logger.warn('TranscriptionService disabled (no OPENAI_API_KEY configured)');
+    logger.warn('TranscriptionService disabled (no STT provider configured: set OPENAI_API_KEY or WHISPER_BASE_URL)');
   } else {
-    logger.info('TranscriptionService enabled (Whisper API)');
+    logger.info('TranscriptionService enabled (delegates to STTProviderRouter)');
   }
 
   const googleOAuthService = (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET)
@@ -1195,6 +1236,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     sseService,
     storageService,
     transcriptionService,
+    sttRouter,
     domainPromptBuilder: new DomainPromptBuilder({
       prisma: rlsPrisma,
       projectGraphService,
