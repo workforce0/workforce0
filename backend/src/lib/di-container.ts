@@ -419,6 +419,11 @@ export interface Services {
   meetingBotRouter: MeetingBotRouter;
   /** Shared with the Recall webhook route for HMAC verification. */
   recallWebhookSecret: string | undefined;
+
+  /** Validated env-derived config — exposed so routes (e.g.
+   *  /api/integrations/status) can probe feature URLs without
+   *  re-importing the config module. */
+  config: typeof config;
 }
 
 /**
@@ -1270,6 +1275,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     agentHub,
     meetingBotRouter,
     recallWebhookSecret: config.RECALL_WEBHOOK_SECRET,
+    config,
   };
 
   // Decorate Fastify instance with services
