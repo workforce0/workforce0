@@ -426,6 +426,10 @@ export class AgentHub {
         action: 'review_pr',
         targetRepo: devJob.targetRepo,
         payload: {
+          // The daemon's executor reads payload.targetRepo to route the
+          // job to the right local checkout; without it the QA chain
+          // fails with `Unknown targetRepo: ""`.
+          targetRepo: devJob.targetRepo,
           branch: payload.branch,
           prdContent: payload.prdContent,
           prUrl: devJob.result?.prUrl,

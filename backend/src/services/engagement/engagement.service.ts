@@ -200,12 +200,20 @@ export class EngagementService {
     switch (agentType) {
       case 'dev_agent': {
         const prdId = output?.prdId as string;
+        // The route that triggers PRD approval now mints a dev_agent
+        // ticket+AgentTask and passes their IDs through output (see
+        // routes/agents.routes.ts approve handler). Forward both to the
+        // DEV_AGENT_PROCESS handler so it doesn't fall back to
+        // tix_legacy_<empty-taskId> and fail downstream prisma updates.
+        const taskId = (output?.taskId as string) ?? '';
+        const ticketId = (output?.ticketId as string) ?? '';
         if (prdId) {
           await this.queueService.addJob('dev_agent_process', {
             prdId,
             engagementId,
             tenantId,
-            taskId: '', // Will be created by the processor
+            taskId,
+            ticketId,
           });
         }
         break;

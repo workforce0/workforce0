@@ -420,13 +420,40 @@ export async function agentRoutes(fastify: FastifyInstance): Promise<void> {
 
           if (engagement) {
             engagementId = engagement.id;
+            // The engagement-path used to call advancePhase('build') and
+            // rely on engagement.service.dispatchAgentForPhase to enqueue
+            // the dev job. That path enqueued without ticketId/taskId,
+            // and the DEV_AGENT_PROCESS handler then tried to update a
+            // non-existent ticket → prisma error → orphaned job. We now
+            // create the dev_agent ticket here (mirroring the
+            // no-engagement branch below) and pass the resulting IDs to
+            // advancePhase via output, so dispatchAgentForPhase can
+            // forward them to the job. See task #188.
+            const created = await fastify.services.ticketService.createAsNewWork({
+              tenantId,
+              roleSlug: 'dev_agent',
+              title: `Implement PRD ${id}`,
+              agentTaskInput: { type: 'prd_implementation', prdId: id },
+              payload: { type: 'prd_implementation', prdId: id },
+            });
+
             // Advance from 'approve' to 'build'
             await engagementService.advancePhase(tenantId, engagement.id, {
               confidence: 1.0,
               targetPhase: 'build' as any,
-              output: { prdId: id, approvedAt: new Date().toISOString() },
+              output: {
+                prdId: id,
+                approvedAt: new Date().toISOString(),
+                taskId: created.agentTaskId,
+                ticketId: created.ticket.id,
+              },
             });
-            logger.info('Engagement advanced to build phase', { engagementId: engagement.id, prdId: id });
+            logger.info('Engagement advanced to build phase', {
+              engagementId: engagement.id,
+              prdId: id,
+              taskId: created.agentTaskId,
+              ticketId: created.ticket.id,
+            });
           }
         }
 

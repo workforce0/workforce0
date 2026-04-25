@@ -507,12 +507,16 @@ export function createProcessors(deps: ProcessorDependencies) {
         return;
       }
 
-      // Create an engagement for this completed meeting via the Supervisor flow
+      // Create an engagement for this completed meeting via the Supervisor flow.
+      // The id is captured on the outer scope so we can advance phases after
+      // the BA agent finishes (see "Engagement phase advancement" below).
+      let createdEngagementId: string | null = null;
       try {
         const engagement = await engagementService.create(tenantId, {
           title: meeting.title || `Meeting ${meetingId}`,
           meetingId,
         });
+        createdEngagementId = engagement.id;
         logger.info('Engagement created for completed meeting', {
           engagementId: engagement.id,
           meetingId,
@@ -643,6 +647,48 @@ export function createProcessors(deps: ProcessorDependencies) {
           needsClarification: result.needsClarification,
           councilDecision: result.councilDecision,
         });
+
+        // Engagement phase advancement: BA agent does the work of three
+        // phases in one shot (listen → understand → analyze_ask → approve).
+        // Walk the engagement through those transitions so a subsequent
+        // PRD-approve call (approve → build) is a valid transition.
+        // Without this the engagement stays in `listen` and the dev
+        // dispatch silently fails on `Invalid transition from 'listen'
+        // to 'build'`. See task #187.
+        if (
+          createdEngagementId &&
+          result.prd?.id &&
+          !result.needsClarification &&
+          (engagementService as any).advancePhase
+        ) {
+          try {
+            const intermediates: Array<{
+              from: 'listen' | 'understand' | 'analyze_ask';
+              to: 'understand' | 'analyze_ask' | 'approve';
+            }> = [
+              { from: 'listen', to: 'understand' },
+              { from: 'understand', to: 'analyze_ask' },
+              { from: 'analyze_ask', to: 'approve' },
+            ];
+            for (const step of intermediates) {
+              await (engagementService as any).advancePhase(tenantId, createdEngagementId, {
+                confidence: result.confidence ?? 1.0,
+                targetPhase: step.to,
+                output: { prdId: result.prd.id, baCompleted: true },
+              });
+            }
+            logger.info('Engagement walked through BA phases to approve', {
+              engagementId: createdEngagementId,
+              prdId: result.prd.id,
+            });
+          } catch (advanceErr) {
+            logger.error('Failed to advance engagement phases after BA', {
+              engagementId: createdEngagementId,
+              error: (advanceErr as Error).message,
+            });
+            // Non-fatal: BA still produced a PRD; user can re-approve manually
+          }
+        }
 
         // Record outcome for the learning loop
         if (outcomeObserver) {
