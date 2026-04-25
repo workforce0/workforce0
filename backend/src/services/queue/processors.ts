@@ -512,14 +512,16 @@ export function createProcessors(deps: ProcessorDependencies) {
       // produce two active engagements for the same meeting — the
       // approve-time "find latest active engagement by meetingId" lookup
       // would then resolve non-deterministically. We look for an existing
-      // active engagement first and reuse it on retries.
+      // active engagement via the service helper first and reuse it on
+      // retries. NOTE: the find→create sequence is not atomic; two truly
+      // concurrent MEETING_PROCESS workers can still both miss `existing`
+      // and create separate engagements. The proper fix is a partial
+      // unique index on (tenantId, meetingId) WHERE status = 'active' —
+      // tracked as a follow-up.
       let createdEngagementId: string | null = null;
       try {
-        const existing = await (engagementService as any).prisma?.engagement?.findFirst?.({
-          where: { tenantId, meetingId, status: 'active' },
-          orderBy: { createdAt: 'desc' },
-          select: { id: true },
-        });
+        const findActive = (engagementService as any).findActiveByMeeting?.bind(engagementService);
+        const existing = findActive ? await findActive(tenantId, meetingId) : null;
         if (existing?.id) {
           createdEngagementId = existing.id;
           logger.info('Reusing existing active engagement for meeting', {
@@ -692,22 +694,35 @@ export function createProcessors(deps: ProcessorDependencies) {
           // finishing without flagging clarification is itself proof
           // the work is done. Forwarding `result.confidence` would
           // silently pause the engagement when Gemini returned <0.5.
-          const PHASE_ORDER = ['listen', 'understand', 'analyze_ask', 'approve'] as const;
+          // Canonical engagement phase order, including post-approve
+          // states so a duplicate/late MEETING_PROCESS doesn't try to
+          // drag a `build`/`test`/`ship`/`learn` engagement BACKWARD
+          // into BA territory. We treat any unknown phase as "past
+          // all BA targets" to be safe.
+          const PHASE_ORDER = [
+            'listen', 'understand', 'analyze_ask', 'approve',
+            'build', 'test', 'ship', 'learn',
+          ] as const;
           const targets = ['understand', 'analyze_ask', 'approve'] as const;
           let stuckAt: string | null = null;
+          let advancedAtLeastOne = false;
           for (const target of targets) {
             try {
               const current = await (engagementService as any).get?.(createdEngagementId);
               const currentIdx = current ? PHASE_ORDER.indexOf(current.phase) : -1;
               const targetIdx = PHASE_ORDER.indexOf(target);
               // Skip if the engagement is already at-or-past this
-              // phase (likely a retry of a partially-completed walk).
-              if (currentIdx >= targetIdx) continue;
+              // phase (retry of a partially-completed walk, or a
+              // duplicate MEETING_PROCESS hitting an already-built
+              // engagement). Unknown phases (idx === -1) are treated
+              // as past all BA targets and skipped.
+              if (currentIdx === -1 || currentIdx >= targetIdx) continue;
               await (engagementService as any).advancePhase(tenantId, createdEngagementId, {
                 confidence: 1.0,
                 targetPhase: target,
                 output: { prdId: result.prd.id, baCompleted: true },
               });
+              advancedAtLeastOne = true;
             } catch (advanceErr) {
               stuckAt = target;
               logger.error('Failed to advance engagement phase after BA', {
@@ -716,8 +731,7 @@ export function createProcessors(deps: ProcessorDependencies) {
                 error: (advanceErr as Error).message,
               });
               // Don't break — a later phase might still succeed even
-              // if this one threw transiently. If it doesn't, the
-              // next BA retry's skip-if-past-phase check resumes.
+              // if this one threw transiently.
             }
           }
           if (!stuckAt) {
@@ -725,8 +739,26 @@ export function createProcessors(deps: ProcessorDependencies) {
               engagementId: createdEngagementId,
               prdId: result.prd.id,
             });
+          } else if (!advancedAtLeastOne) {
+            // Nothing moved AND something failed → re-throw so BullMQ
+            // retries the whole MEETING_PROCESS job. Without this, a
+            // transient blip on the very first transition would log
+            // "stuck" and be silently lost — the job completes
+            // successfully and BullMQ never retries.
+            logger.warn('Engagement made no forward progress — failing job for retry', {
+              engagementId: createdEngagementId,
+              prdId: result.prd.id,
+              stuckAt,
+            });
+            throw new Error(
+              `Engagement ${createdEngagementId} stuck at ${stuckAt} — retrying MEETING_PROCESS`,
+            );
           } else {
-            logger.warn('Engagement may be stuck after BA — next retry will resume', {
+            // Made partial progress. Don't re-run the BA agent (it
+            // already produced a PRD); just log that the next reply-
+            // to-approve / web-UI approve will use the skip-if-past
+            // guard to resume from where we stopped.
+            logger.warn('Engagement walked partway after BA — approve flow will resume', {
               engagementId: createdEngagementId,
               prdId: result.prd.id,
               stuckAt,

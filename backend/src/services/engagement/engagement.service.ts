@@ -82,6 +82,23 @@ export class EngagementService {
   }
 
   /**
+   * Look up the most recent active engagement for a meeting (if any).
+   * Reused by the meeting processor to make MEETING_PROCESS idempotent
+   * — a retried job reuses the existing engagement instead of inserting
+   * a second active one. NOTE: this is a best-effort in-process check;
+   * two truly concurrent MEETING_PROCESS workers can still race past
+   * it. A unique index on `(tenantId, meetingId)` for active rows is
+   * the proper long-term fix and is tracked separately.
+   */
+  async findActiveByMeeting(tenantId: string, meetingId: string): Promise<{ id: string } | null> {
+    return this.prisma.engagement.findFirst({
+      where: { tenantId, meetingId, status: 'active' },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+  }
+
+  /**
    * Advance the engagement to the next phase.
    *
    * Rules:
