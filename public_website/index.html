@@ -23,6 +23,7 @@
         </div>
       </div>
       <nav class="nav-links">
+        <a href="#step-zero">Step 0</a>
         <a href="#solution">Solution</a>
         <a href="#agents">Agents</a>
         <a href="#system">System</a>
@@ -137,6 +138,30 @@
             <h3>Passive AI</h3>
             <p>Transcription tools listen but never clarify or take action.</p>
           </div>
+        </div>
+      </section>
+
+      <section class="step-zero" id="step-zero" data-animate>
+        <div class="section-head">
+          <h2>Step 0 — Runs on your laptop</h2>
+          <p>One <code>docker compose up</code> starts a local meeting bot, local LLMs, and local transcription. No external accounts required. BYOK keys (Anthropic, OpenAI, Google) work alongside as fallbacks.</p>
+        </div>
+        <div class="step-zero-grid">
+          <div class="panel">
+            <h3>Bundled Vexa</h3>
+            <p>Apache 2.0 meeting bot — joins Google Meet/Zoom/Teams. Audio stays on your host.</p>
+          </div>
+          <div class="panel">
+            <h3>Local LLMs</h3>
+            <p>Ollama + Qwen 3.5 (8B/32B) and Mistral Small 3 (24B). Pick a tier in the wizard; it reads your hardware.</p>
+          </div>
+          <div class="panel">
+            <h3>Local STT</h3>
+            <p>faster-whisper-server — meeting transcripts never leave your network.</p>
+          </div>
+        </div>
+        <div class="step-zero-cta">
+          <a href="https://github.com/workforce0/workforce0" class="btn primary">Get started →</a>
         </div>
       </section>
 
