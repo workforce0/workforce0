@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -113,6 +114,7 @@ export default function Landing() {
       <main id="main-content">
         <Hero onCopy={copyCommand} copied={copied} />
         <SocialProof />
+        <ArchitectureDiagram />
         <HowItWorks />
         <AudienceSplit />
         <FeatureGrid />
@@ -375,6 +377,47 @@ function SocialProof() {
           </span>
         ))}
       </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ARCHITECTURE DIAGRAM — the cycle, visualized
+// ─────────────────────────────────────────────────────────────
+
+function ArchitectureDiagram() {
+  return (
+    <section
+      id="architecture"
+      aria-labelledby="architecture-title"
+      className="relative max-w-6xl mx-auto px-5 lg:px-8 pt-20 pb-12 lg:pt-28 lg:pb-16"
+    >
+      <div className="text-center mb-10">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary mb-3">
+          The cycle
+        </p>
+        <h2
+          id="architecture-title"
+          className="text-3xl lg:text-4xl font-semibold tracking-tight text-balance"
+        >
+          Six agents, one Chief of Staff, every decision approved by you.
+        </h2>
+        <p className="mt-3 text-[14px] text-ink-secondary max-w-2xl mx-auto">
+          Meeting → PRD → Review → Dev → QA → Ship → Memory. The Chief of Staff
+          posts to Slack/WhatsApp/Teams; you approve, pause, or cancel by replying.
+        </p>
+      </div>
+      <figure className="rounded-2xl overflow-hidden border border-border bg-surface-muted/40 backdrop-blur-sm shadow-[0_30px_80px_-20px_rgba(0,0,0,0.5)]">
+        <Image
+          src="/architecture.jpg"
+          alt="Workforce0 architecture: Meeting Brain feeds the BA Agent, who hands a PRD to the Architect/Supervisor; Dev Agent codes and pushes to GitHub; QA Agent reviews; Chief of Staff posts approvals to a Human Executive over Slack/WhatsApp/Teams; Memory Optimizer archives the cycle."
+          width={2304}
+          height={1296}
+          priority={false}
+          sizes="(max-width: 1024px) 100vw, 1024px"
+          className="w-full h-auto"
+        />
+      </figure>
     </section>
   );
 }
