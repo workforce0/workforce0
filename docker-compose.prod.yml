@@ -116,7 +116,7 @@ services:
   # Ollama (local LLM, opt-in via COMPOSE_PROFILES=local-llm)
   # ---------------------------------------------------------------------------
   ollama:
-    image: ollama/ollama:0.21
+    image: ollama/ollama:0.21.2
     container_name: workforce0-ollama
     restart: unless-stopped
     profiles: ["local-llm"]
