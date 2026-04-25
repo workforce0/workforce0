@@ -305,9 +305,13 @@ describe('EngagementService', () => {
       prisma.engagement.findFirst.mockResolvedValue(eng);
       prisma.engagement.updateMany.mockResolvedValue({ count: 1 });
 
+      // dev_agent dispatch now requires the caller to pre-mint a
+      // ticket+task and pass `taskId` / `ticketId` through `output`
+      // (see commit 2644542). Without taskId the service refuses to
+      // queue and logs a skip — that's tested separately below.
       await service.advancePhase('tenant-1', 'eng-001', {
         confidence: 0.9,
-        output: { prdId: 'prd-001' },
+        output: { prdId: 'prd-001', taskId: 'task-001', ticketId: 'tix-001' },
       });
 
       expect(queueService.addJob).toHaveBeenCalledWith(
@@ -316,8 +320,25 @@ describe('EngagementService', () => {
           prdId: 'prd-001',
           engagementId: 'eng-001',
           tenantId: 'tenant-1',
+          taskId: 'task-001',
+          ticketId: 'tix-001',
         }),
       );
+    });
+
+    it('skips dev_agent dispatch when output lacks a taskId', async () => {
+      const eng = makeEngagement({ phase: 'approve' });
+      prisma.engagement.findFirst.mockResolvedValue(eng);
+      prisma.engagement.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.advancePhase('tenant-1', 'eng-001', {
+        confidence: 0.9,
+        output: { prdId: 'prd-001' }, // no taskId on purpose
+      });
+
+      // Caller hasn't provided a taskId, so we refuse to queue a
+      // malformed job that would just fail in the worker anyway.
+      expect(queueService.addJob).not.toHaveBeenCalled();
     });
 
     it('does not dispatch agent for approve phase (human-driven, null agent)', async () => {
@@ -337,10 +358,12 @@ describe('EngagementService', () => {
       prisma.engagement.updateMany.mockResolvedValue({ count: 1 });
       queueService.addJob.mockRejectedValue(new Error('Redis down'));
 
-      // Should NOT throw even though queue fails
+      // Should NOT throw even though queue fails. dev_agent dispatch
+      // also needs a taskId in output now (commit 2644542) — pass one
+      // so we actually exercise the queue.addJob path.
       const result = await service.advancePhase('tenant-1', 'eng-001', {
         confidence: 0.9,
-        output: { prdId: 'prd-001' },
+        output: { prdId: 'prd-001', taskId: 'task-redis-down' },
       });
 
       expect(result.phase).toBe('build');
@@ -507,7 +530,7 @@ describe('EngagementService', () => {
       // Without queue service, dispatch should not happen
       await serviceNoQueue.advancePhase('tenant-1', 'eng-001', {
         confidence: 0.9,
-        output: { prdId: 'prd-001' },
+        output: { prdId: 'prd-001', taskId: 'task-001', ticketId: 'tix-001' },
       });
       expect(queueService.addJob).not.toHaveBeenCalled();
 
@@ -519,9 +542,10 @@ describe('EngagementService', () => {
       );
       prisma.engagement.updateMany.mockResolvedValue({ count: 1 });
 
+      // dev_agent dispatch needs taskId in output (commit 2644542)
       await serviceNoQueue.advancePhase('tenant-1', 'eng-001', {
         confidence: 0.9,
-        output: { prdId: 'prd-002' },
+        output: { prdId: 'prd-002', taskId: 'task-002', ticketId: 'tix-002' },
       });
 
       expect(queueService.addJob).toHaveBeenCalled();
