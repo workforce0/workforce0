@@ -64,6 +64,10 @@ model TenantSettings {
   /// Selected meeting-bot provider. One of "vexa" | "recall" | "manual".
   /// Null = use router default (preferred provider for this install).
   meetingBotProviderId String?
+  /// Step 0 wizard: true once the tenant has migrated to a local LLM tier.
+  step0Migrated        Boolean  @default(false)
+  /// Step 0 wizard: true once the tenant explicitly dismissed the migration banner.
+  step0Dismissed       Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
