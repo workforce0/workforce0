@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -146,7 +146,13 @@ const TOOL_CARDS: ToolCard[] = [
 export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps) {
   const router = useRouter();
   const toast = useToast();
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+  // `?step0=1` from the Step0MigrationBanner deep-links existing installs
+  // straight into the hardware check (step 2), skipping the welcome screen.
+  const [step, setStep] = useState(() => {
+    const step0 = searchParams.get("step0");
+    return step0 === "1" ? 2 : 1;
+  });
 
   // Plan 3 Step 0 wizard state
   const [hardwareProfile, setHardwareProfile] = useState<HardwareProfile | null>(null);
