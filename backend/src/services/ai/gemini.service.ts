@@ -7,8 +7,8 @@
  *
  * Model Selection:
  * ----------------
- * - gemini-2.0-flash: Used for PRD generation (long context, fast)
- * - gemini-2.0-flash: Fallback (same model for consistency)
+ * - gemini-3.1-flash: Used for PRD generation (long context, fast)
+ * - gemini-3.1-flash: Fallback (same model for consistency)
  *
  * Why Gemini for PRDs?
  * --------------------
@@ -228,10 +228,10 @@ export class GeminiService {
   private readonly logger = createChildLogger({ service: 'GeminiService' });
 
   /** Default model for PRD generation */
-  private static readonly PRD_MODEL = 'gemini-2.0-flash';
+  private static readonly PRD_MODEL = 'gemini-3.1-flash';
 
   /** Fallback model if primary is unavailable */
-  private static readonly FALLBACK_MODEL = 'gemini-2.0-flash';
+  private static readonly FALLBACK_MODEL = 'gemini-3.1-flash';
 
   private readonly disabled: boolean;
 

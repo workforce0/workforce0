@@ -68,7 +68,7 @@ export class SupervisorAgent extends BaseConsultant {
       }),
       maxSteps: 15,
       confidenceThreshold: 0.85,
-      defaultModel: { provider: 'anthropic', modelId: 'claude-sonnet-4' },
+      defaultModel: { provider: 'anthropic', modelId: 'claude-sonnet-4-6' },
     }, skillLoader);
   }
 

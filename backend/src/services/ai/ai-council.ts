@@ -190,7 +190,7 @@ export class AICouncil {
 
     // Add Gemini's implicit vote
     votes.push({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.1-flash',
       vote: prd.confidence >= 0.8 ? 'approve' : 'revise',
       confidence: prd.confidence,
       concerns: [],
@@ -221,7 +221,7 @@ export class AICouncil {
       if (critique.overallAssessment === 'approve') {
         // Critique approved, add vote and exit loop
         votes.push({
-          model: 'gpt-4o-critique',
+          model: 'gpt-5.5-critique',
           vote: 'approve',
           confidence: critique.critiqueConfidence,
           concerns: [],
@@ -251,7 +251,7 @@ export class AICouncil {
 
         // Add revision vote
         votes.push({
-          model: `gemini-2.0-flash-revision-${iterationCount}`,
+          model: `gemini-3.1-flash-revision-${iterationCount}`,
           vote: prd.confidence >= 0.8 ? 'approve' : 'revise',
           confidence: prd.confidence,
           concerns: [],
@@ -260,7 +260,7 @@ export class AICouncil {
       } else {
         // Critique rejected or max iterations reached
         votes.push({
-          model: 'gpt-4o-critique',
+          model: 'gpt-5.5-critique',
           vote: critique.overallAssessment === 'reject' ? 'reject' : 'revise',
           confidence: critique.critiqueConfidence,
           concerns: critique.issues.map(i => i.description),
@@ -322,7 +322,7 @@ export class AICouncil {
         totalLatencyMs: timing.total,
         totalCostUsd,
         primaryProvider: 'google',
-        primaryModelId: 'gemini-2.0-flash',
+        primaryModelId: 'gemini-3.1-flash',
         reviewerCount: this.openai.isEnabled() && this.config.enableCritique ? 1 : 0,
       });
     }
@@ -414,7 +414,7 @@ export class AICouncil {
       confidence: prd.confidence,
       prd,
       votes: [{
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.1-flash',
         vote: 'approve',
         confidence: prd.confidence,
         concerns: [],
@@ -440,7 +440,7 @@ export class AICouncil {
         totalLatencyMs: Date.now() - startTime,
         totalCostUsd,
         primaryProvider: 'google',
-        primaryModelId: 'gemini-2.0-flash',
+        primaryModelId: 'gemini-3.1-flash',
         reviewerCount: 0,
       });
     }

@@ -224,7 +224,7 @@ describe('OpenAIService', () => {
 
         expect(result.vote).toBe('approve');
         expect(result.confidence).toBe(0.9);
-        expect(result.model).toBe('gpt-4o');
+        expect(result.model).toBe('gpt-5.5');
       });
 
       it('considers existing votes when provided', async () => {

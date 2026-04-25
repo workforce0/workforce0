@@ -32,7 +32,7 @@ describe('MeetingBrainAgent', () => {
 
     mockModelRegistry = {
       resolveModel: vi.fn().mockResolvedValue({
-        modelId: 'gemini-2.0-flash',
+        modelId: 'gemini-3.1-flash',
         provider: 'google',
         confidenceThreshold: 0.85,
         maxSteps: 25,
@@ -577,7 +577,7 @@ describe('MeetingBrainAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.1-flash',
       }),
     );
   });
@@ -602,7 +602,7 @@ describe('MeetingBrainAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.1-flash',
       }),
     );
   });

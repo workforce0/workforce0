@@ -69,7 +69,7 @@ export class MeetingBrainAgent extends BaseConsultant {
       tools: createMeetingBrainTools({ prisma, memoryService }),
       maxSteps: 25,
       confidenceThreshold: 0.85,
-      defaultModel: { provider: 'google', modelId: 'gemini-2.0-flash' },
+      defaultModel: { provider: 'google', modelId: 'gemini-3.1-flash' },
     }, skillLoader);
   }
 

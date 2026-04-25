@@ -18,14 +18,38 @@
 import { PrismaClient } from '../../../prisma/generated/client/index.js';
 import { createChildLogger } from '../../lib/logger.js';
 
-/** Approximate cost per 1M tokens by model family. */
+/**
+ * Approximate cost per 1M tokens by model family.
+ *
+ * Historical entries are retained for backwards compatibility with
+ * existing rows in `tenant_usage` that reference older SKUs — the
+ * lookup matches the longest key first, so newer specific IDs win.
+ *
+ * Local models (Ollama / vLLM) report $0/$0 — they have no per-token
+ * cost; operator pays in hardware/electricity.
+ */
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
+  // Historical (kept for legacy usage rows)
   'gemini-2.0-flash': { input: 0.075, output: 0.30 },
   'gemini-2.5-flash': { input: 0.15, output: 0.60 },
   'gpt-4o-mini': { input: 0.15, output: 0.60 },
   'gpt-4o': { input: 2.50, output: 10.00 },
   'claude-sonnet': { input: 3.00, output: 15.00 },
   'claude-opus': { input: 15.00, output: 75.00 },
+  // April 2026 SKUs
+  'claude-opus-4-7': { input: 15.00, output: 75.00 },
+  'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+  'claude-haiku-4-5': { input: 0.25, output: 1.25 },
+  'gemini-3.1-pro': { input: 1.25, output: 5.00 },
+  'gemini-3.1-flash': { input: 0.10, output: 0.40 },
+  'gpt-5.5': { input: 2.50, output: 15.00 },
+  'gpt-5.4': { input: 2.50, output: 15.00 },
+  'gpt-5-nano': { input: 0.05, output: 0.40 },
+  'o3': { input: 2.00, output: 8.00 },
+  // Local models — no per-token cost
+  'qwen3.5:8b': { input: 0, output: 0 },
+  'qwen3.5:32b': { input: 0, output: 0 },
+  'mistral-small-3:24b': { input: 0, output: 0 },
 };
 
 /** Fallback tier when model name doesn't match any known entry. */

@@ -26,7 +26,7 @@ describe('SupervisorAgent', () => {
     };
     mockModelRegistry = {
       resolveModel: vi.fn().mockResolvedValue({
-        modelId: 'claude-sonnet-4',
+        modelId: 'claude-sonnet-4-6',
         provider: 'anthropic',
         confidenceThreshold: 0.85,
         maxSteps: 10,
@@ -449,7 +449,7 @@ describe('SupervisorAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'claude-sonnet-4',
+        model: 'claude-sonnet-4-6',
       }),
     );
   });
@@ -476,7 +476,7 @@ describe('SupervisorAgent', () => {
     expect(result.success).toBe(true);
     expect(mockModelClient.chat).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'claude-sonnet-4',
+        model: 'claude-sonnet-4-6',
       }),
     );
   });
