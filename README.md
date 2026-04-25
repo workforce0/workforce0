@@ -157,6 +157,8 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 > **Optional:** add `--profile meeting-bot` to bundle a local meeting bot (Vexa) — see [Meeting Bot integration docs](https://docs.workforce0.com/integrations/meeting-bot/).
+>
+> **Optional:** add `--profile local-llm --profile local-stt` to bundle local models — see [Local Models docs](https://docs.workforce0.com/integrations/local-models/).
 
 The backend container applies pending Prisma migrations on boot, so
 there's no manual `db migrate` step — bring up the stack, wait ~30s for
