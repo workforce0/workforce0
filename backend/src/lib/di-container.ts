@@ -69,6 +69,7 @@ import { MeetingService } from '../services/meeting/meeting.service.js';
 import { BAAgentService } from '../services/agent/ba-agent.service.js';
 import { GeminiService } from '../services/ai/gemini.service.js';
 import { OpenAIService } from '../services/ai/openai.service.js';
+import { OllamaService } from '../services/ai/ollama.service.js';
 import { AICouncil } from '../services/ai/ai-council.js';
 import { JiraService } from '../services/integrations/jira.service.js';
 import { LinearService } from '../services/integrations/linear.service.js';
@@ -272,6 +273,9 @@ export interface Services {
   // AI services
   geminiService: GeminiService;
   openaiService: OpenAIService;
+  /** Local LLM provider (Ollama). Stays disabled when OLLAMA_BASE_URL is
+   *  unset; the AI Council fallback chain skips it via isAvailable(). */
+  ollamaService: OllamaService;
   aiCouncil: AICouncil;
 
   // Integration services
@@ -547,6 +551,25 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   // ==========================================================================
   const geminiService = new GeminiService(config.GEMINI_API_KEY);
   const openaiService = new OpenAIService(config.OPENAI_API_KEY);
+
+  // Local LLM provider (Ollama). Disabled until OLLAMA_BASE_URL is set
+  // (the `local-llm` Compose profile defaults it to http://ollama:11434).
+  // Plan 2: pre-warms the small extraction tier so the first real call
+  // doesn't pay cold-load latency. warmModel() logs and swallows when no
+  // model is pulled yet, so this is safe on a fresh install.
+  const ollamaService = new OllamaService({
+    baseUrl: config.OLLAMA_BASE_URL,
+    keepAlive: config.OLLAMA_KEEP_ALIVE,
+  });
+  if (ollamaService.isEnabled()) {
+    void ollamaService.warmModel('qwen3.5:8b');
+    logger.info('OllamaService enabled (warming qwen3.5:8b)', {
+      baseUrl: config.OLLAMA_BASE_URL,
+    });
+  } else {
+    logger.warn('OllamaService disabled (no OLLAMA_BASE_URL set)');
+  }
+
   const aiCouncil = new AICouncil(geminiService, openaiService);
 
   const jiraService = new JiraService({
@@ -1178,6 +1201,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     baAgentService,
     geminiService,
     openaiService,
+    ollamaService,
     aiCouncil,
     jiraService,
     googleChatService,
