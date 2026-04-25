@@ -296,7 +296,10 @@ export class ApprovalFanoutService {
     if (engagementId && this.engagementService) {
       // Mint the dev_agent ticket+task here so the engagement-path
       // dispatcher in engagement.service.ts can forward both IDs to the
-      // queued job (matching the route handler's behaviour).
+      // queued job (matching the route handler's behaviour). If
+      // advancePhase throws (e.g. wrong current phase, prisma error)
+      // we cancel the freshly minted ticket so a retry doesn't leave
+      // an orphan + duplicate work.
       const created = await this.ticketService.createAsNewWork({
         tenantId,
         roleSlug: 'dev_agent',
@@ -304,16 +307,21 @@ export class ApprovalFanoutService {
         agentTaskInput: { type: 'prd_implementation', prdId },
         payload: { type: 'prd_implementation', prdId },
       });
-      await this.engagementService.advancePhase(tenantId, engagementId, {
-        confidence: 1.0,
-        targetPhase: 'build',
-        output: {
-          prdId,
-          approvedAt: new Date().toISOString(),
-          taskId: created.agentTaskId,
-          ticketId: created.ticket.id,
-        },
-      });
+      try {
+        await this.engagementService.advancePhase(tenantId, engagementId, {
+          confidence: 1.0,
+          targetPhase: 'build',
+          output: {
+            prdId,
+            approvedAt: new Date().toISOString(),
+            taskId: created.agentTaskId,
+            ticketId: created.ticket.id,
+          },
+        });
+      } catch (err) {
+        await this.cancelOrphanTicket(created.ticket.id, created.agentTaskId, prdId);
+        throw err;
+      }
       this.logger.info(
         { prdId, engagementId, taskId: created.agentTaskId, ticketId: created.ticket.id },
         'Engagement advanced + dev job dispatched via reply-to-approve',
@@ -329,17 +337,46 @@ export class ApprovalFanoutService {
       agentTaskInput: { type: 'prd_implementation', prdId },
       payload: { type: 'prd_implementation', prdId },
     });
-    await this.queueService.addJob('dev_agent_process', {
-      prdId,
-      engagementId: '',
-      tenantId,
-      taskId: created.agentTaskId,
-      ticketId: created.ticket.id,
-    });
+    try {
+      await this.queueService.addJob('dev_agent_process', {
+        prdId,
+        engagementId: '',
+        tenantId,
+        taskId: created.agentTaskId,
+        ticketId: created.ticket.id,
+      });
+    } catch (err) {
+      await this.cancelOrphanTicket(created.ticket.id, created.agentTaskId, prdId);
+      throw err;
+    }
     this.logger.info(
       { prdId, taskId: created.agentTaskId, ticketId: created.ticket.id },
       'Dev job queued directly via reply-to-approve (no engagement)',
     );
+  }
+
+  /**
+   * Best-effort cleanup when we minted a Ticket+AgentTask but the
+   * follow-up dispatch failed. Marks both rows as cancelled so a retry
+   * doesn't leave dangling open work.
+   */
+  private async cancelOrphanTicket(ticketId: string, agentTaskId: string, prdId: string): Promise<void> {
+    try {
+      await (this.prisma as any).ticket.update({
+        where: { id: ticketId },
+        data: { status: 'cancelled', error: 'Dispatch failed after ticket creation' },
+      });
+      await (this.prisma as any).agentTask.update({
+        where: { id: agentTaskId },
+        data: { status: 'failed', error: 'Dispatch failed after task creation' },
+      });
+      this.logger.warn({ prdId, ticketId, agentTaskId }, 'Cancelled orphan ticket+task after dispatch failure');
+    } catch (cleanupErr) {
+      this.logger.error(
+        { prdId, ticketId, agentTaskId, error: (cleanupErr as Error).message },
+        'Failed to clean up orphan ticket — manual cleanup required',
+      );
+    }
   }
 
   private async getOrCreateToken(prdId: string, tenantId: string): Promise<string> {

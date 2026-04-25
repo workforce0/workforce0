@@ -661,32 +661,51 @@ export function createProcessors(deps: ProcessorDependencies) {
           !result.needsClarification &&
           (engagementService as any).advancePhase
         ) {
-          try {
-            const intermediates: Array<{
-              from: 'listen' | 'understand' | 'analyze_ask';
-              to: 'understand' | 'analyze_ask' | 'approve';
-            }> = [
-              { from: 'listen', to: 'understand' },
-              { from: 'understand', to: 'analyze_ask' },
-              { from: 'analyze_ask', to: 'approve' },
-            ];
-            for (const step of intermediates) {
+          // Each transition has its OWN try/catch so a mid-walk failure
+          // doesn't leave the engagement permanently stuck in
+          // `understand` or `analyze_ask` (where neither the
+          // pending-approval UI nor the existing `approve → build`
+          // re-approve path can recover it). We also force confidence
+          // to 1.0 here: the BA agent finishing without flagging
+          // clarification is itself proof the work is done. If we
+          // forwarded `result.confidence` and Gemini returned 0.4, the
+          // first transition would silently *pause* the engagement
+          // (CONFIDENCE_THRESHOLD is 0.5) and the rest would throw.
+          const intermediates = [
+            { from: 'listen', to: 'understand' },
+            { from: 'understand', to: 'analyze_ask' },
+            { from: 'analyze_ask', to: 'approve' },
+          ] as const;
+          let stuckAt: string | null = null;
+          for (const step of intermediates) {
+            try {
               await (engagementService as any).advancePhase(tenantId, createdEngagementId, {
-                confidence: result.confidence ?? 1.0,
+                confidence: 1.0,
                 targetPhase: step.to,
                 output: { prdId: result.prd.id, baCompleted: true },
               });
+            } catch (advanceErr) {
+              stuckAt = step.from;
+              logger.error('Failed to advance engagement phase after BA', {
+                engagementId: createdEngagementId,
+                from: step.from,
+                to: step.to,
+                error: (advanceErr as Error).message,
+              });
+              break;
             }
+          }
+          if (!stuckAt) {
             logger.info('Engagement walked through BA phases to approve', {
               engagementId: createdEngagementId,
               prdId: result.prd.id,
             });
-          } catch (advanceErr) {
-            logger.error('Failed to advance engagement phases after BA', {
+          } else {
+            logger.warn('Engagement stuck after BA — manual cleanup may be needed', {
               engagementId: createdEngagementId,
-              error: (advanceErr as Error).message,
+              prdId: result.prd.id,
+              stuckAt,
             });
-            // Non-fatal: BA still produced a PRD; user can re-approve manually
           }
         }
 

@@ -54,14 +54,22 @@ test.describe('Sidebar navigation surfaces the new entries', () => {
     // These links only show inside the authenticated dashboard shell. If the
     // dashboard either redirects to /login or renders an auth-loading state
     // without the sidebar, treat the test as a no-auth skip.
-    await page.goto('/dashboard');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
     if (page.url().includes('/login')) {
       test.skip(true, 'No auth — cannot verify authenticated sidebar');
       return;
     }
 
+    // Auth checks are client-side and the dashboard shell renders a few
+    // hundred ms after navigation completes. Without the wait, a slow
+    // render makes the sidebar look "missing" and we falsely skip the
+    // test even when the user is properly authed.
     const sidebar = page.locator('nav, aside, [role="navigation"]');
-    const sidebarShowed = await sidebar.first().isVisible().catch(() => false);
+    const sidebarShowed = await sidebar
+      .first()
+      .waitFor({ state: 'visible', timeout: 4000 })
+      .then(() => true)
+      .catch(() => false);
     if (!sidebarShowed) {
       test.skip(true, 'Dashboard rendered without sidebar (likely unauthenticated)');
       return;

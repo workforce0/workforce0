@@ -31,10 +31,14 @@ export default [
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // Downgrade to warning so existing intentional disables and edge cases
-      // don't block CI. Re-tighten in a follow-up.
+      // exhaustive-deps stays a warning — there are legitimate edge cases
+      // where a stable identity is intentionally omitted, and forcing it
+      // to error would block CI on cosmetic noise.
       'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/rules-of-hooks': 'warn',
+      // rules-of-hooks must stay an error — a hook called conditionally
+      // or inside a loop is always a real bug (React explicitly
+      // documents this is undefined behaviour).
+      'react-hooks/rules-of-hooks': 'error',
     },
   },
   {

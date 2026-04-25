@@ -205,8 +205,11 @@ export class EngagementService {
         // routes/agents.routes.ts approve handler). Forward both to the
         // DEV_AGENT_PROCESS handler so it doesn't fall back to
         // tix_legacy_<empty-taskId> and fail downstream prisma updates.
-        const taskId = (output?.taskId as string) ?? '';
-        const ticketId = (output?.ticketId as string) ?? '';
+        // We pass `undefined` (not `''`) when missing so the handler's
+        // `?? \`tix_legacy_${taskId}\`` fallback actually triggers — an
+        // empty string is truthy enough to defeat `??`.
+        const taskId = (output?.taskId as string) || undefined;
+        const ticketId = (output?.ticketId as string) || undefined;
         if (prdId) {
           await this.queueService.addJob('dev_agent_process', {
             prdId,

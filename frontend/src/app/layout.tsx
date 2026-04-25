@@ -10,6 +10,13 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  // metadataBase makes relative paths in `icons`/`openGraph.images`
+  // resolve to absolute URLs for crawlers (LinkedIn, Twitter, Slack
+  // unfurls). Without it, Next falls back to localhost:3000 in
+  // production builds and OG images break on every share. Override at
+  // build time with NEXT_PUBLIC_SITE_URL when deploying behind a
+  // different origin.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://workforce0.com'),
   title: "Workforce0 — AI workforce for product teams",
   description: "Open-source, self-hosted AI workforce. Meetings in, shipped work out.",
   icons: {

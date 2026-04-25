@@ -29,7 +29,12 @@ export default defineConfig({
     ? undefined
     : {
         command: 'npm run dev',
-        url: baseURL,
+        // `npm run dev` always binds to 3001, so the readiness probe must
+        // hit 3001 too. Setting `url: baseURL` would break here when a
+        // caller overrides PLAYWRIGHT_BASE_URL without also setting
+        // PLAYWRIGHT_SKIP_WEB_SERVER — the probe would poll the wrong
+        // port and time out after 120s with a misleading error.
+        url: 'http://localhost:3001',
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
       },
