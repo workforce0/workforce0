@@ -260,6 +260,10 @@ describe('Agent Dispatch Chain — Integration', () => {
         taskId: 'task-1',
         branch: 'feat/test',
         prdContent: 'Implement user auth',
+        // The bridge reads engagementId off the job payload (commit
+        // abde7db) so the mocked job needs to carry it for the
+        // build→test transition assertion to fire.
+        engagementId: 'engagement-test',
       },
       result: null,
     });
@@ -302,7 +306,7 @@ describe('Agent Dispatch Chain — Integration', () => {
     // from the AgentJob payload.
     expect(mockEngagementService.advancePhase).toHaveBeenCalledWith(
       'tenant-1',
-      expect.any(String),
+      'engagement-test',
       expect.objectContaining({ targetPhase: 'test' }),
     );
 
