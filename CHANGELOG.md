@@ -5,6 +5,13 @@ All notable changes to Workforce0 are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/workforce0/workforce0/compare/workforce0-v1.0.0...workforce0-v1.1.0) (2026-04-25)
+
+
+### Features
+
+* **landing:** add architecture diagram to the real Next.js landing page ([b4a841a](https://github.com/workforce0/workforce0/commit/b4a841a4c5a79ca9a657187516de79d176d2b19e))
+
 ## 1.0.0 (2026-04-25)
 
 
