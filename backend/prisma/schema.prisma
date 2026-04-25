@@ -265,6 +265,10 @@ model Meeting {
   source       String    @default("upload") // 'upload' | 'google_meet' | 'voice_dialin' | 'recall'
   audioUrl     String? // S3 key for uploaded/recorded audio
   uploadedBy   String? // userId who uploaded (for Google OAuth per-user)
+  /// Step 0: human-readable reason when status='failed'. Set when a
+  /// scheduled bot fails to dispatch or join. Surfaced in API responses
+  /// and UI so the exec can see "why" without reading logs.
+  failureReason String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
