@@ -1,6 +1,8 @@
 # MVP Implementation Guide
 ## Workforce0: Meeting → PRD → Jira Flow
 
+> **⚠ Historical document.** This guide describes the original MVP built around a direct Recall.ai integration. Recall.ai was removed entirely in PR #38 (2026-04-25) and replaced with a `MeetingBotProvider` abstraction supporting Vexa (BYO endpoint) and Manual upload. The architecture diagrams, code snippets, and webhook contracts below reflect the pre-removal implementation and are kept for historical context only. For current docs see [Meeting Bot integration](https://docs.workforce0.com/integrations/meeting-bot/) and [Step 0 spec](../../docs/superpowers/specs/2026-04-25-step-0-local-everything-bundle-design.md).
+
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0 |

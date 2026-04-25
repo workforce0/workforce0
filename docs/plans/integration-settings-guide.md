@@ -97,9 +97,10 @@ integrations:
       waiting_room_bypass: false
 
     # Fallback for unsupported platforms (e.g., if customer uses Zoom
-    # but joins a Google Meet, use Recall.ai universal bot)
+    # but joins a Google Meet, use a self-hosted Vexa endpoint as the
+    # universal meeting bot)
     fallback:
-      provider: "recall_ai"       # Universal meeting bot API
+      provider: "vexa"            # BYO Vexa endpoint via VEXA_API_URL
       enabled: true
 
   # ═══════════════════════════════════════════════════════════════════
@@ -419,7 +420,8 @@ class ConnectorRouter:
             # Native integration - use tenant's configured bot
             return await self._native_join(preferred_provider, tenant_id, meeting_url)
         else:
-            # Cross-platform - use Recall.ai universal bot
+            # Cross-platform - use the configured fallback bot provider
+            # (Vexa BYO endpoint by default; "manual" returns 503)
             return await self._fallback_join(tenant_id, meeting_url)
 
     def _detect_meeting_provider(self, url: str) -> str:
@@ -503,7 +505,7 @@ class ConnectorRouter:
 | | Zoom | ✅ Supported | Zoom OAuth 2.0 | Native bot + transcription |
 | | Microsoft Teams | ✅ Supported | Azure AD OAuth | Native bot + transcription |
 | | Webex | 🔄 Planned | Webex OAuth | Q2 2026 |
-| | *Fallback* | ✅ Supported | Recall.ai | Universal bot for any platform |
+| | *Fallback* | ✅ Supported | Vexa (BYO) | Self-hosted Vexa endpoint via `VEXA_API_URL` |
 | **Communication** | | | | |
 | | Slack | ✅ Supported | Slack OAuth 2.0 | Full API access |
 | | Google Chat | ✅ Supported | Google OAuth 2.0 | Spaces + DMs |

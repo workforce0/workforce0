@@ -34,7 +34,7 @@ The "Dev Agent" (heavy compute) needs different K8s resources than the "Concierg
 ├── /apps                          # Deployable Services (The "Runtime")
 │   ├── /web-dashboard             # React/Next.js + Shadcn/ui (User Interface)
 │   ├── /api-gateway               # Fastify/NestJS (Auth, Rate Limiting, Request Routing)
-│   ├── /extension                 # Browser Extension (The "Recall.ai Fallback")
+│   ├── /extension                 # Browser Extension (in-tab capture fallback)
 │   │
 │   # --- The Agent Microservices ---
 │   ├── /agent-ba                  # Business Analyst Agent Service
