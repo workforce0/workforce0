@@ -252,8 +252,8 @@ function Hero({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
 
         {/* Subhead */}
         <p className="mt-6 text-[17px] sm:text-[19px] leading-[1.55] text-ink-secondary max-w-2xl mx-auto">
-          Open-source, self-hosted, BYOK. Multi-model AI Council turns meetings
-          into briefs, briefs into tickets, tickets into shipped work. Your exec
+          Open-source, self-hosted, BYOK. Meetings become briefs, briefs become
+          tickets, tickets become code your team reviews and ships. Your exec
           approves from Slack.
         </p>
 
@@ -404,7 +404,7 @@ function HowItWorks() {
       icon: <Users className="w-5 h-5" aria-hidden />,
       title: "Dispatch",
       body:
-        "Specialist agents (BA, architect, dev, QA) pull tickets. Dev code-gen runs on your laptop via Claude Code / Cursor — code never transits.",
+        "Specialist agents (BA, architect, dev, QA) pull tickets. Dev code-gen runs on your laptop via Claude Code / Cursor — source code doesn't route through our backend.",
     },
     {
       icon: <Check className="w-5 h-5" aria-hidden />,
@@ -543,7 +543,7 @@ function FeatureGrid() {
     {
       icon: <Cpu className="w-5 h-5" aria-hidden />,
       title: "Multi-model AI Council",
-      body: "Every planner call runs through consensus across Claude, GPT, and Gemini. One provider down? The council keeps planning.",
+      body: "BA agent drafts briefs through multi-model consensus across Claude, GPT, and Gemini. The planner gracefully falls back across providers. One provider down? The system keeps moving.",
     },
     {
       icon: <KeyRound className="w-5 h-5" aria-hidden />,
@@ -553,7 +553,7 @@ function FeatureGrid() {
     {
       icon: <Slack className="w-5 h-5" aria-hidden />,
       title: "Comms-first workflow",
-      body: "Slack, WhatsApp, Teams, Google Chat. The exec never opens the app — approvals happen in the room they already work in.",
+      body: "Slack, Google Chat, WhatsApp — two-way reply-to-approve. Teams is one-way notifications today. The exec never opens the app; approvals happen in the room they already work in.",
     },
     {
       icon: <Workflow className="w-5 h-5" aria-hidden />,
@@ -578,7 +578,7 @@ function FeatureGrid() {
     {
       icon: <Code2 className="w-5 h-5" aria-hidden />,
       title: "Local code-gen",
-      body: "The dev agent uses your Claude Code / Cursor subscription via a local daemon. Production code never leaves your machine.",
+      body: "The dev agent uses your Claude Code / Cursor subscription via a local daemon. Source code flows to the CLI you already trust — not through our backend.",
     },
     {
       icon: <Layers className="w-5 h-5" aria-hidden />,
@@ -691,7 +691,7 @@ function WhyOpenSource() {
     },
     {
       title: "Your stack stays yours.",
-      body: "Vanilla Postgres, Redis, Node. Run it on k8s, Fly, Railway, a Hetzner box, or your laptop. We don't own your runway.",
+      body: "Vanilla Postgres, Redis, Node. Run it on Docker Compose, Fly, Railway, Render, DigitalOcean, or a Hetzner box. We don't own your runway.",
     },
   ];
 
@@ -811,8 +811,8 @@ function FinalCTA() {
               Spin it up. See if it fits.
             </h2>
             <p className="mt-5 text-[15px] sm:text-[17px] text-white/70 max-w-xl mx-auto leading-relaxed">
-              A fresh install on a laptop takes about a minute. First brief
-              approved in Slack: about a day.
+              A fresh install on a laptop takes a couple of minutes. First
+              brief approved in Slack: same afternoon.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <a
