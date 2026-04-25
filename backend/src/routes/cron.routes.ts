@@ -28,7 +28,7 @@ export async function cronRoutes(fastify: FastifyInstance): Promise<void> {
       cronExpression: z.string().min(1),
       timezone: z.string().optional(),
       jobType: z.string().min(1),
-      payload: z.record(z.unknown()).optional(),
+      payload: z.record(z.string(), z.unknown()).optional(),
     });
     const parsed = schema.safeParse(request.body);
     if (!parsed.success) {

@@ -33,14 +33,14 @@ const CreateMemberSchema = z.object({
   email: z.string().email(),
   role: z.enum(['founder', 'cto', 'pm', 'developer', 'designer', 'qa']),
   preferredChannel: z.enum(['slack', 'email', 'whatsapp', 'teams', 'sms']).optional(),
-  channelIds: z.record(z.string()).optional(),
+  channelIds: z.record(z.string(), z.string()).optional(),
 });
 
 const UpdateMemberSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   role: z.enum(['founder', 'cto', 'pm', 'developer', 'designer', 'qa']).optional(),
   preferredChannel: z.enum(['slack', 'email', 'whatsapp', 'teams', 'sms']).optional(),
-  channelIds: z.record(z.string()).optional(),
+  channelIds: z.record(z.string(), z.string()).optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: 'At least one field must be provided for update',
 });

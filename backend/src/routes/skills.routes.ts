@@ -113,7 +113,7 @@ export async function skillsRoutes(fastify: FastifyInstance): Promise<void> {
     const { slug } = request.params as { slug: string };
     const schema = z.object({
       userInstruction: z.string().optional(),
-      config: z.record(z.string()).optional(),
+      config: z.record(z.string(), z.string()).optional(),
     });
     const parsed = schema.safeParse(request.body ?? {});
     if (!parsed.success) {

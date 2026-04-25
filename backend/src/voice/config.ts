@@ -255,8 +255,8 @@ export const DEFAULT_GEMINI_LIVE_CONFIG: GeminiLiveConfig = {
 export const voiceEnvSchema = z.object({
   GEMINI_API_KEY: z.string().min(1, 'Gemini API key is required'),
   VOICE_MODEL: z.string().default('gemini-2.5-flash-native-audio-preview-12-2025'),
-  VOICE_SILENCE_MS: z.string().transform(Number).default('800'),
-  VOICE_SPEECH_THRESHOLD: z.string().transform(Number).default('0.6'),
+  VOICE_SILENCE_MS: z.string().default('800').transform(Number),
+  VOICE_SPEECH_THRESHOLD: z.string().default('0.6').transform(Number),
 });
 
 export type VoiceEnvConfig = z.infer<typeof voiceEnvSchema>;

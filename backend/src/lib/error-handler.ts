@@ -152,7 +152,7 @@ export function setupErrorHandler(app: FastifyInstance): void {
       // Handle Zod validation errors
       // =======================================================================
       if (error instanceof ZodError) {
-        const formattedErrors = error.errors.map((err) => ({
+        const formattedErrors = error.issues.map((err) => ({
           path: err.path.join('.'),
           message: err.message,
         }));

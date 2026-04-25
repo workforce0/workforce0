@@ -10,7 +10,7 @@ const optionalUrl = z.string().url().optional().or(z.literal('')).transform(v =>
 const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3000'),
+  PORT: z.string().default('3000').transform(Number),
   HOST: z.string().default('0.0.0.0'),
 
   // Database

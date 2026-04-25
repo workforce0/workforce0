@@ -85,8 +85,8 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     }
 
     const schema = z.object({
-      credentials: z.record(z.unknown()),
-      metadata: z.record(z.unknown()).optional(),
+      credentials: z.record(z.string(), z.unknown()),
+      metadata: z.record(z.string(), z.unknown()).optional(),
     });
     const parsed = schema.safeParse(request.body);
     if (!parsed.success) {
