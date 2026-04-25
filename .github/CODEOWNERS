@@ -1,5 +1,9 @@
 # CODEOWNERS — auto-assigned reviewers on PRs.
 # Docs: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Syntax rule: one pattern per line. Multiple patterns separated by
+# whitespace on a single line are NOT supported — GitHub treats the
+# first token as the pattern and everything after it as owners.
 
 # Default: every file, unless a more specific rule matches below.
 *                                   @workforce0
@@ -7,7 +11,10 @@
 # Infra & deploy
 /.github/                           @workforce0
 /docker-compose.prod.yml            @workforce0
-/fly.toml /railway.json /render.yaml /.do/    @workforce0
+/fly.toml                           @workforce0
+/railway.json                       @workforce0
+/render.yaml                        @workforce0
+/.do/                               @workforce0
 
 # Backend (Fastify + Prisma + services)
 /backend/prisma/                    @workforce0
@@ -23,9 +30,10 @@
 # Agent daemon
 /agent/                             @workforce0
 
-# Docs site — relax review gate so typo fixes can flow
+# Docs site
 /docs-site/src/content/docs/        @workforce0
 
-# Strategy documents — extra eyes
-/CLAUDE.md /AGENTS.md               @workforce0
+# Strategy documents
+/CLAUDE.md                          @workforce0
+/AGENTS.md                          @workforce0
 /docs/PRD-Workforce0-Platform.md    @workforce0
