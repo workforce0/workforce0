@@ -36,7 +36,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@workos-inc/node": "^8.8.0",
-    "bullmq": "^5.76.1",
+    "bullmq": "^5.76.2",
     "dotenv": "^16.4.7",
     "fastify": "^5.8.5",
     "googleapis": "^170.1.0",
