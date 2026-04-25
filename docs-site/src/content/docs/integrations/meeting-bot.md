@@ -31,10 +31,16 @@ The bot-manager needs Docker control to spawn per-meeting containers. We isolate
 
 ### Existing installs
 
-Vexa needs a separate database (`workforce0_vexa`) on your existing Postgres. New installs get this automatically via `backend/db-init/01-create-vexa-db.sql`. **For existing installs**, create it manually once:
+Vexa needs a separate database (`workforce0_vexa`) on your existing Postgres. New installs get this automatically via `backend/db-init/01-create-vexa-db.sql` (which only runs on a fresh Postgres volume). **For existing installs**, run the bootstrap script once:
 
 ```bash
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE workforce0_vexa"
+./bin/bootstrap-vexa-db.sh
+```
+
+It's idempotent — safe to re-run; it checks for the database first and only creates it when missing. After it succeeds, restart with the `meeting-bot` profile enabled:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile meeting-bot up -d
 ```
 
 ## Option 2 — Recall.ai (BYOK)
@@ -48,9 +54,13 @@ Set in `.env`:
 ```bash
 RECALL_API_KEY=your-recall-key
 RECALL_WEBHOOK_SECRET=your-webhook-signing-secret
+# Optional — override regional endpoint. Defaults to us-west-2.
+# RECALL_API_BASE_URL=https://eu-central-1.recall.ai/api/v1
 ```
 
 Configure Recall to send webhooks to `https://your-host/webhooks/meeting-bot/recall`. The `RECALL_WEBHOOK_SECRET` is used to verify the `x-recall-signature` HMAC on every event.
+
+Recall.ai is regionalized — if your account lives in `us-east-1` or `eu-central-1`, set `RECALL_API_BASE_URL` to match. See [Recall's regions docs](https://docs.recall.ai/docs/regions) for the full list.
 
 ### Cost
 
