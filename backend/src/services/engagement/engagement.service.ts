@@ -204,10 +204,11 @@ export class EngagementService {
         // ticket+AgentTask and passes their IDs through output (see
         // routes/agents.routes.ts approve handler). Forward both to the
         // DEV_AGENT_PROCESS handler so it doesn't fall back to
-        // tix_legacy_<empty-taskId> and fail downstream prisma updates.
-        // We pass `undefined` (not `''`) when missing so the handler's
-        // `?? \`tix_legacy_${taskId}\`` fallback actually triggers — an
-        // empty string is truthy enough to defeat `??`.
+        // `tix_legacy_<empty-taskId>` and fail downstream prisma updates.
+        // We coerce missing values to `undefined` (not `''`) because
+        // `??` only falls back on null/undefined — an empty string is
+        // falsy *and* non-nullish, so `'' ?? <fallback>` would still
+        // produce `''` and bypass the legacy-id fallback.
         const taskId = (output?.taskId as string) || undefined;
         const ticketId = (output?.ticketId as string) || undefined;
         if (prdId) {

@@ -274,8 +274,15 @@ export class ApprovalFanoutService {
    * call applyReplyAction twice for the same token (we consume it).
    */
   private async dispatchAfterApproval(prdId: string, tenantId: string): Promise<void> {
-    if (!this.queueService || !this.ticketService) {
-      this.logger.debug({ prdId }, 'No queue/ticket service wired — reply-to-approve skips dispatch');
+    // Always need ticketService — both branches mint a ticket+task.
+    // The engagement branch additionally needs engagementService (it
+    // hands the work off to engagement.advancePhase which dispatches
+    // through its own internal queue). The no-engagement branch
+    // additionally needs queueService (it enqueues directly). We
+    // check each combination per-branch below rather than gating
+    // everything behind a single all-or-nothing guard.
+    if (!this.ticketService) {
+      this.logger.debug({ prdId }, 'No ticket service wired — reply-to-approve skips dispatch');
       return;
     }
 
@@ -352,7 +359,15 @@ export class ApprovalFanoutService {
       return;
     }
 
-    // No engagement → fall back to the no-engagement path the route uses.
+    // No engagement → fall back to the no-engagement path the route
+    // uses (direct queue dispatch). This branch needs queueService.
+    if (!this.queueService) {
+      this.logger.debug(
+        { prdId },
+        'No queue service wired — reply-to-approve cannot dispatch the no-engagement path',
+      );
+      return;
+    }
     const created = await this.ticketService.createAsNewWork({
       tenantId,
       roleSlug: 'dev_agent',
