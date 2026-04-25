@@ -1170,6 +1170,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   const recallProvider = new RecallProvider({
     apiKey: config.RECALL_API_KEY,
     webhookSecret: config.RECALL_WEBHOOK_SECRET,
+    baseUrl: config.RECALL_API_BASE_URL,
   });
   const vexaProvider = new VexaProvider({
     baseUrl: config.VEXA_API_URL ?? 'http://vexa-api:18056',

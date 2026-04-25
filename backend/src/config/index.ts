@@ -65,7 +65,11 @@ const envSchema = z.object({
   // RECALL_API_KEY enables the BYOK Recall.ai provider; the webhook secret
   // is used by the HMAC-validated Recall webhook route. VEXA_API_URL points
   // at the bundled Vexa container (default http://vexa-api:18056).
+  // RECALL_API_BASE_URL overrides the regional endpoint (e.g.
+  // https://us-east-1.recall.ai/api/v1, https://eu-central-1.recall.ai/api/v1).
+  // Default: https://us-west-2.recall.ai/api/v1.
   RECALL_API_KEY: optionalString,
+  RECALL_API_BASE_URL: optionalUrl,
   RECALL_WEBHOOK_SECRET: optionalString,
   VEXA_API_URL: optionalString,
 

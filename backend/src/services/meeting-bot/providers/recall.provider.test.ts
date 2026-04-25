@@ -23,7 +23,7 @@ describe('RecallProvider', () => {
     const p = new RecallProvider({ apiKey: 'test-key', webhookSecret: 'sec' });
     await expect(p.isAvailable()).resolves.toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.recall.ai/api/v1/bot/?limit=1',
+      'https://us-west-2.recall.ai/api/v1/bot/?limit=1',
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Token test-key' }),
       }),
@@ -44,7 +44,7 @@ describe('RecallProvider', () => {
     expect(result.botId).toBe('bot-abc');
     expect(result.status).toBe('scheduled');
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.recall.ai/api/v1/bot/',
+      'https://us-west-2.recall.ai/api/v1/bot/',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ Authorization: 'Token k' }),
@@ -65,7 +65,7 @@ describe('RecallProvider', () => {
     const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
     await p.cancelBot('bot-xyz');
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.recall.ai/api/v1/bot/bot-xyz/leave_call/',
+      'https://us-west-2.recall.ai/api/v1/bot/bot-xyz/leave_call/',
       expect.objectContaining({ method: 'POST' }),
     );
   });
@@ -76,5 +76,21 @@ describe('RecallProvider', () => {
     );
     const p = new RecallProvider({ apiKey: 'k', webhookSecret: 's' });
     await expect(p.getTranscript('bot-abc')).resolves.toBeNull();
+  });
+
+  it('honors a custom baseUrl override (regional endpoints)', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ results: [] }), { status: 200 }));
+    const p = new RecallProvider({
+      apiKey: 'test-key',
+      webhookSecret: 'sec',
+      baseUrl: 'https://eu-central-1.recall.ai/api/v1',
+    });
+    await expect(p.isAvailable()).resolves.toBe(true);
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://eu-central-1.recall.ai/api/v1/bot/?limit=1',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Token test-key' }),
+      }),
+    );
   });
 });

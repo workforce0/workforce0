@@ -19,23 +19,36 @@ import type {
 } from '../meeting-bot-provider.types.js';
 
 const logger = createChildLogger({ service: 'RecallProvider' });
-const RECALL_API_BASE = 'https://api.recall.ai/api/v1';
+
+/**
+ * Default Recall.ai endpoint. Recall.ai is regionalized — see
+ * https://docs.recall.ai/docs/regions for the full list (us-west-2,
+ * us-east-1, eu-central-1, etc.). Operators on a non-default region
+ * should set `RECALL_API_BASE_URL` to override.
+ */
+const DEFAULT_RECALL_API_BASE = 'https://us-west-2.recall.ai/api/v1';
 
 export interface RecallProviderConfig {
   apiKey: string | undefined;
   webhookSecret: string | undefined;
+  /** Override the default region endpoint. Defaults to us-west-2. */
+  baseUrl?: string;
 }
 
 export class RecallProvider implements MeetingBotProvider {
   readonly id: ProviderId = 'recall';
   readonly displayName = 'Recall.ai';
 
-  constructor(private readonly config: RecallProviderConfig) {}
+  private readonly baseUrl: string;
+
+  constructor(private readonly config: RecallProviderConfig) {
+    this.baseUrl = config.baseUrl ?? DEFAULT_RECALL_API_BASE;
+  }
 
   async isAvailable(): Promise<boolean> {
     if (!this.config.apiKey) return false;
     try {
-      const res = await fetch(`${RECALL_API_BASE}/bot/?limit=1`, {
+      const res = await fetch(`${this.baseUrl}/bot/?limit=1`, {
         headers: { Authorization: `Token ${this.config.apiKey}` },
       });
       return res.ok;
@@ -46,7 +59,7 @@ export class RecallProvider implements MeetingBotProvider {
   }
 
   async scheduleBot(input: ScheduleBotInput): Promise<ScheduleBotResult> {
-    const res = await fetch(`${RECALL_API_BASE}/bot/`, {
+    const res = await fetch(`${this.baseUrl}/bot/`, {
       method: 'POST',
       headers: {
         Authorization: `Token ${this.requireKey()}`,
@@ -67,7 +80,7 @@ export class RecallProvider implements MeetingBotProvider {
   }
 
   async cancelBot(botId: string): Promise<void> {
-    const res = await fetch(`${RECALL_API_BASE}/bot/${botId}/leave_call/`, {
+    const res = await fetch(`${this.baseUrl}/bot/${botId}/leave_call/`, {
       method: 'POST',
       headers: { Authorization: `Token ${this.requireKey()}` },
     });
@@ -78,7 +91,7 @@ export class RecallProvider implements MeetingBotProvider {
   }
 
   async getTranscript(botId: string): Promise<MeetingTranscript | null> {
-    const res = await fetch(`${RECALL_API_BASE}/bot/${botId}/`, {
+    const res = await fetch(`${this.baseUrl}/bot/${botId}/`, {
       headers: { Authorization: `Token ${this.requireKey()}` },
     });
     if (!res.ok) {
