@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 interface CatalogEntry {
-  name: IntegrationName | "gdrive" | "twilio" | "gdocs" | "asana" | "salesforce";
+  name: IntegrationName | "gdrive" | "gdocs" | "asana" | "salesforce";
   label: string;
   blurb: string;
   status: "available" | "coming_soon";
@@ -144,6 +144,7 @@ export default function IntegrationsPage() {
                           "linear",
                           "notion",
                           "gchat",
+                          "twilio",
                         ];
                         if (canWizard.includes(entry.name as IntegrationName)) {
                           setWizardOpen(entry.name as IntegrationName);
