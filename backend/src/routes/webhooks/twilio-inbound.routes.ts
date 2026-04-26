@@ -120,11 +120,17 @@ function hangupTwiML(message: string): string {
 
 /**
  * Pre-handler: verify the X-Twilio-Signature header against TWILIO_AUTH_TOKEN.
- * When the token isn't set (BYO Twilio is optional during install), the
- * verification is bypassed with a warning log so a self-hoster can complete
- * setup. Mirrors the policy in `routes/twilio.routes.ts::verifyTwilioWebhook`,
- * with one twist: we don't reject in production when the token is unset
- * because production self-hosters who don't use voice should not be blocked.
+ *
+ * Bypass policy:
+ *   - In production with no token set, REJECT with 503 — a forged unsigned
+ *     webhook would otherwise trigger meeting creation / PIN prompts. A
+ *     production self-hoster who isn't using voice can simply leave the
+ *     route unmounted (callerAuth gates inbound calls separately); but if
+ *     the route IS mounted, missing token = misconfiguration, not "skip".
+ *   - In dev/test with no token set, allow through with a warning so a
+ *     first-time installer can complete the wizard against ngrok without
+ *     copying the auth token first. Mirrors the dev-only bypass in
+ *     `routes/twilio.routes.ts::verifyTwilioWebhook`.
  */
 const verifyTwilioSignature: preHandlerHookHandler = async (
   request: FastifyRequest,
@@ -132,11 +138,18 @@ const verifyTwilioSignature: preHandlerHookHandler = async (
 ) => {
   const authToken = config.TWILIO_AUTH_TOKEN;
   if (!authToken) {
+    if (config.NODE_ENV === 'production') {
+      logger.error(
+        { url: request.url },
+        'TWILIO_AUTH_TOKEN missing in production — rejecting unsigned voice webhook',
+      );
+      return reply.status(503).send({ error: 'voice intake not configured' });
+    }
     logger.warn(
-      { url: request.url },
-      'TWILIO_AUTH_TOKEN unset — Twilio signature verification BYPASSED. Set TWILIO_AUTH_TOKEN to enforce.',
+      { url: request.url, nodeEnv: config.NODE_ENV },
+      'TWILIO_AUTH_TOKEN unset — bypassing signature verification (non-production only). Set TWILIO_AUTH_TOKEN before exposing this endpoint to the public internet.',
     );
-    return; // Allow through.
+    return; // Allow through (dev/test only).
   }
 
   const signature = request.headers['x-twilio-signature'];

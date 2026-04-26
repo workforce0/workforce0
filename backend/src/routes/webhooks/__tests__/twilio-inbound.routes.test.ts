@@ -4,10 +4,11 @@
  * @module routes/webhooks/__tests__/twilio-inbound.routes.test
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import formbody from '@fastify/formbody';
 import { twilioInboundRoutes } from '../twilio-inbound.routes.js';
+import { config } from '../../../config/index.js';
 
 vi.mock('../../../lib/logger.js', () => ({
   createChildLogger: vi.fn().mockReturnValue({
@@ -118,5 +119,48 @@ describe('POST /webhooks/twilio/voice/pin', () => {
     });
     expect(res.body).toContain('Access denied');
     expect(res.body).toContain('<Hangup');
+  });
+});
+
+describe('Twilio signature verification gating', () => {
+  // The pre-handler reads `config.NODE_ENV` and `config.TWILIO_AUTH_TOKEN`
+  // at request time, so we mutate the cached config object to flip modes.
+  // (config is loaded once at import; these tests restore on teardown.)
+  const originalNodeEnv = config.NODE_ENV;
+  const originalToken = config.TWILIO_AUTH_TOKEN;
+
+  afterEach(() => {
+    (config as { NODE_ENV: string }).NODE_ENV = originalNodeEnv;
+    (config as { TWILIO_AUTH_TOKEN: string | undefined }).TWILIO_AUTH_TOKEN = originalToken;
+  });
+
+  it('rejects with 503 in production when TWILIO_AUTH_TOKEN is unset', async () => {
+    (config as { NODE_ENV: string }).NODE_ENV = 'production';
+    (config as { TWILIO_AUTH_TOKEN: string | undefined }).TWILIO_AUTH_TOKEN = undefined;
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/webhooks/twilio/voice/inbound',
+      payload: 'From=%2B15551234567&To=%2B18005551111&CallSid=CA10',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toMatchObject({ error: 'voice intake not configured' });
+  });
+
+  it('allows through in development when TWILIO_AUTH_TOKEN is unset', async () => {
+    (config as { NODE_ENV: string }).NODE_ENV = 'development';
+    (config as { TWILIO_AUTH_TOKEN: string | undefined }).TWILIO_AUTH_TOKEN = undefined;
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/webhooks/twilio/voice/inbound',
+      payload: 'From=%2B15551234567&To=%2B18005551111&CallSid=CA11',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('<Connect>');
   });
 });
