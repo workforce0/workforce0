@@ -43,6 +43,15 @@ DEFAULT_SYSTEM_PROMPT = (
     "they're calling, and capture key facts."
 )
 
+# Default Ollama model for the voice bridge. Matches MODELS.md and the
+# backend's pre-warmed model. Operators can override via OLLAMA_MODEL env
+# var without rebuilding the image.
+DEFAULT_OLLAMA_MODEL = "qwen3.5:8b"
+
+
+def _ollama_model() -> str:
+    return os.environ.get("OLLAMA_MODEL") or DEFAULT_OLLAMA_MODEL
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
@@ -86,7 +95,7 @@ async def synthetic(request: Request, token: str = Query(...)) -> JSONResponse:
     audio = await request.body()
     pipeline = VoicePipeline(
         stt=STTAdapter(os.environ["WHISPER_BASE_URL"]),
-        llm=LLMAdapter(os.environ["OLLAMA_BASE_URL"]),
+        llm=LLMAdapter(os.environ["OLLAMA_BASE_URL"], model=_ollama_model()),
         tts=TTSAdapter(os.environ["KOKORO_BASE_URL"]),
         system_prompt="You are a synthetic-session intake agent.",
     )
@@ -149,7 +158,7 @@ async def session(websocket: WebSocket, call_id: str, token: str = Query(...)) -
 
     pipeline = VoicePipeline(
         stt=STTAdapter(os.environ["WHISPER_BASE_URL"]),
-        llm=LLMAdapter(os.environ["OLLAMA_BASE_URL"]),
+        llm=LLMAdapter(os.environ["OLLAMA_BASE_URL"], model=_ollama_model()),
         tts=TTSAdapter(os.environ["KOKORO_BASE_URL"]),
         system_prompt=system_prompt,
     )
