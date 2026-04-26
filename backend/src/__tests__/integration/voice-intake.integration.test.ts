@@ -33,6 +33,9 @@ interface TestServices {
   tenantResolver: {
     resolveTenantByDID: ReturnType<typeof vi.fn>;
   };
+  twilioVoiceProvider: {
+    getAuthToken: () => string | null;
+  };
 }
 
 const buildApp = async (): Promise<FastifyInstance> => {
@@ -45,6 +48,13 @@ const buildApp = async (): Promise<FastifyInstance> => {
     },
     tenantResolver: {
       resolveTenantByDID: vi.fn().mockResolvedValue('t1'),
+    },
+    // Auth-token gating in voice-intake routes now reads from the
+    // provider (DB → env fallback). Integration tests don't have a DB,
+    // so just return null — non-prod NODE_ENV in vitest skips signature
+    // verification with a warning, matching pre-refactor behavior.
+    twilioVoiceProvider: {
+      getAuthToken: () => null,
     },
   };
   (app as unknown as { services: TestServices }).services = services;

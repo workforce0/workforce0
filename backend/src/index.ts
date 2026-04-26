@@ -204,15 +204,27 @@ async function main(): Promise<void> {
       logger.info('Voice intake media-stream WebSocket route registered');
     }
 
-    // Twilio Media Stream WebSocket (for voice dial-in)
-    if (app.services.twilioVoiceService && config.OPENAI_API_KEY) {
+    // Twilio Media Stream WebSocket (for voice dial-in).
+    //
+    // Note: this WS route is mounted at boot from the provider's *current*
+    // service. If the operator later configures Twilio via the integrations
+    // UI, the /api/meetings/:id/voice-join endpoint picks up the new creds
+    // immediately (it reads from `twilioVoiceProvider.getCurrent()` per
+    // request). However the audio bridge below is still bound to the boot
+    // snapshot — the OpenAI client is constructed at mount time and the
+    // dispatcher map is sealed once the server starts listening. Adding
+    // dynamic re-mount on settings change is tracked as follow-up to
+    // issue #44 (the WS dispatcher needs a per-connection lookup, not a
+    // static handler reference).
+    const twilioVoiceServiceForWs = app.services.twilioVoiceProvider.getCurrent();
+    if (twilioVoiceServiceForWs && config.OPENAI_API_KEY) {
       const twilioWss = setupTwilioMediaStreamWebSocket({
-        twilioVoiceService: app.services.twilioVoiceService,
+        twilioVoiceService: twilioVoiceServiceForWs,
         openaiApiKey: config.OPENAI_API_KEY,
       });
       wsRoutes.set('/media-stream/', twilioWss);
       logger.info('Twilio Media Stream WebSocket route registered (using OpenAI Realtime)');
-    } else if (app.services.twilioVoiceService && !config.OPENAI_API_KEY) {
+    } else if (twilioVoiceServiceForWs && !config.OPENAI_API_KEY) {
       logger.warn('Twilio service available but OPENAI_API_KEY not set - voice bot disabled');
     }
 

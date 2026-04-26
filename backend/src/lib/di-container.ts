@@ -93,6 +93,7 @@ import { TranscriptBufferService } from '../services/meeting/transcript-buffer.s
 
 // Twilio Voice (dial-in voice bot)
 import { TwilioVoiceService } from '../services/voice/twilio-voice.service.js';
+import { TwilioVoiceProvider } from '../services/voice/twilio-voice-provider.js';
 
 // Engagement lifecycle
 import { EngagementService } from '../services/engagement/engagement.service.js';
@@ -349,8 +350,18 @@ export interface Services {
   // Model registry — per-tenant provider credential + model config storage
   modelRegistry: ModelRegistryService;
 
-  // Twilio Voice (dial-in voice bot)
-  twilioVoiceService: TwilioVoiceService | null;  // null if Twilio not configured
+  // Twilio Voice (dial-in voice bot).
+  //
+  // `twilioVoiceProvider` is the source of truth — it reads creds from the
+  // IntegrationConnection table per tenant and rebuilds the underlying
+  // service when settings change. Callers should prefer
+  // `twilioVoiceProvider.getCurrent()` over the legacy `twilioVoiceService`
+  // field, which is populated once at boot and goes stale after a settings
+  // save until the next process restart. The legacy field is kept so older
+  // callers don't break during the transition; new code should use the
+  // provider directly.
+  twilioVoiceProvider: TwilioVoiceProvider;
+  twilioVoiceService: TwilioVoiceService | null;  // legacy: stale after settings reload
 
   // Transcript buffering (batches real-time chunks)
   transcriptBuffer: TranscriptBufferService;
@@ -726,6 +737,59 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   // Notion: internal integration token (Bearer). We verify the token, then
   // opportunistically list accessible targets so the wizard can show the
   // target picker in one round-trip. Token prefix must be `secret_` or `ntn_`.
+  // Twilio tester — exec-friendly error messages because this is the
+  // exact failure path a non-dev consumer hits when they paste a wrong SID
+  // or token. We hit the Account API endpoint directly rather than dragging
+  // in the full twilio SDK at boot, keeping startup lean.
+  integrationConnectionService.registerTester('twilio', async (creds) => {
+    const accountSid = String(creds.twilioAccountSid ?? '').trim();
+    const authToken = String(creds.twilioAuthToken ?? '').trim();
+    const phoneNumber = String(creds.twilioPhoneNumber ?? '').trim();
+    if (!accountSid || !authToken) {
+      return { ok: false, error: 'Both the Account SID and Auth Token are required.' };
+    }
+    if (!accountSid.startsWith('AC')) {
+      return {
+        ok: false,
+        error: 'That does not look like a Twilio Account SID — it should start with "AC".',
+      };
+    }
+    try {
+      const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+      const res = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}.json`,
+        { headers: { Authorization: `Basic ${auth}` } },
+      );
+      if (!res.ok) {
+        return {
+          ok: false,
+          error:
+            res.status === 401
+              ? 'Twilio rejected the Auth Token. Double-check you copied the full token from the console.'
+              : `Twilio replied ${res.status}. Verify the Account SID is the one shown on the Twilio dashboard.`,
+        };
+      }
+      const account = (await res.json()) as {
+        friendly_name?: string;
+        status?: string;
+      };
+      return {
+        ok: true,
+        metadata: {
+          friendlyName: account.friendly_name ?? accountSid,
+          accountStatus: account.status ?? 'unknown',
+          phoneNumber: phoneNumber || undefined,
+        },
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error:
+          'Could not reach api.twilio.com. Check this server has outbound HTTPS access.',
+      };
+    }
+  });
+
   integrationConnectionService.registerTester('notion', async (creds) => {
     const apiKey = String(creds.apiKey ?? '').trim();
     if (!apiKey) return { ok: false, error: 'Paste your Notion integration secret first.' };
@@ -870,25 +934,28 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   logger.debug('Business services initialized');
 
   // ==========================================================================
-  // STEP 6.6: Create Twilio Voice service (for dial-in voice bot)
+  // STEP 6.6: Create Twilio Voice provider (for dial-in voice bot)
   // ==========================================================================
-  const twilioVoiceService = (
-    config.TWILIO_ACCOUNT_SID &&
-    config.TWILIO_AUTH_TOKEN &&
-    config.TWILIO_PHONE_NUMBER &&
-    config.WEBHOOK_BASE_URL
-  )
-    ? new TwilioVoiceService({
-        accountSid: config.TWILIO_ACCOUNT_SID,
-        authToken: config.TWILIO_AUTH_TOKEN,
-        phoneNumber: config.TWILIO_PHONE_NUMBER,
-        webhookBaseUrl: config.WEBHOOK_BASE_URL,
-        redis,
-      })
-    : null;
+  // Single-tenant self-hosted: the default tenant's IntegrationConnection
+  // row is the canonical Twilio cred source. If no row exists, the provider
+  // falls back to env vars (TWILIO_*, WEBHOOK_BASE_URL) so existing
+  // file-based deployments keep working unchanged. See issue #44.
+  const twilioVoiceProvider = new TwilioVoiceProvider({
+    tenantId: 'default',
+    integrationConnectionService,
+    envCreds: {
+      TWILIO_ACCOUNT_SID: config.TWILIO_ACCOUNT_SID,
+      TWILIO_AUTH_TOKEN: config.TWILIO_AUTH_TOKEN,
+      TWILIO_PHONE_NUMBER: config.TWILIO_PHONE_NUMBER,
+      WEBHOOK_BASE_URL: config.WEBHOOK_BASE_URL,
+    },
+    redis,
+  });
+  await twilioVoiceProvider.reload();
+  const twilioVoiceService = twilioVoiceProvider.getCurrent();
 
   if (!twilioVoiceService) {
-    logger.warn('TwilioVoiceService disabled (Twilio credentials or WEBHOOK_BASE_URL not configured)');
+    logger.warn('TwilioVoiceService disabled — no creds in IntegrationConnection or env. Configure via the integrations UI.');
   } else {
     // Reconcile any calls that were active before a server restart
     await twilioVoiceService.reconcileOnStartup();
@@ -1444,6 +1511,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     })(),
     modelRegistry: new ModelRegistryService(rlsPrisma),
     queueService,
+    twilioVoiceProvider,
     twilioVoiceService,
     transcriptBuffer,
     engagementService,

@@ -73,6 +73,15 @@ interface ServicesShape {
       ctx: { fromNumber: string; toNumber: string; acceptedAt: number },
     ): void;
   };
+  /**
+   * Live source-of-truth for the Twilio auth token used by signature
+   * verification. Reads from `IntegrationConnection` first, env fallback.
+   * Returning null = unconfigured, in which case production rejects unsigned
+   * requests; non-prod allows them through with a warning (dev install path).
+   */
+  twilioVoiceProvider: {
+    getAuthToken(): string | null;
+  };
 }
 
 /**
@@ -119,65 +128,68 @@ function hangupTwiML(message: string): string {
 }
 
 /**
- * Pre-handler: verify the X-Twilio-Signature header against TWILIO_AUTH_TOKEN.
+ * Pre-handler factory: verify the X-Twilio-Signature header against the
+ * current Twilio auth token (DB → env fallback, via the provider).
+ *
+ * Built per-route as a closure so the auth-token getter is captured
+ * lazily — every call re-reads from the provider, picking up wizard
+ * settings changes without a backend restart.
  *
  * Bypass policy:
- *   - In production with no token set, REJECT with 503 — a forged unsigned
- *     webhook would otherwise trigger meeting creation / PIN prompts. A
- *     production self-hoster who isn't using voice can simply leave the
- *     route unmounted (callerAuth gates inbound calls separately); but if
- *     the route IS mounted, missing token = misconfiguration, not "skip".
- *   - In dev/test with no token set, allow through with a warning so a
- *     first-time installer can complete the wizard against ngrok without
- *     copying the auth token first. Mirrors the dev-only bypass in
+ *   - In production with no token, REJECT with 503 — a forged unsigned
+ *     webhook would otherwise trigger meeting creation / PIN prompts.
+ *   - In dev/test with no token, allow through with a warning so a
+ *     first-time installer can complete the wizard against a tunnel
+ *     before pasting the auth token. Mirrors the dev-only bypass in
  *     `routes/twilio.routes.ts::verifyTwilioWebhook`.
  */
-const verifyTwilioSignature: preHandlerHookHandler = async (
-  request: FastifyRequest,
-  reply: FastifyReply,
-) => {
-  const authToken = config.TWILIO_AUTH_TOKEN;
-  if (!authToken) {
-    if (config.NODE_ENV === 'production') {
-      logger.error(
-        { url: request.url },
-        'TWILIO_AUTH_TOKEN missing in production — rejecting unsigned voice webhook',
+function makeVerifyTwilioSignature(
+  getAuthToken: () => string | null,
+): preHandlerHookHandler {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+      if (config.NODE_ENV === 'production') {
+        logger.error(
+          { url: request.url },
+          'No Twilio auth token (DB or env) in production — rejecting unsigned voice webhook',
+        );
+        return reply.status(503).send({ error: 'voice intake not configured' });
+      }
+      logger.warn(
+        { url: request.url, nodeEnv: config.NODE_ENV },
+        'Twilio auth token unset — bypassing signature verification (non-production only). Configure Twilio in the integrations UI before exposing this endpoint to the public internet.',
       );
-      return reply.status(503).send({ error: 'voice intake not configured' });
+      return; // Allow through (dev/test only).
     }
-    logger.warn(
-      { url: request.url, nodeEnv: config.NODE_ENV },
-      'TWILIO_AUTH_TOKEN unset — bypassing signature verification (non-production only). Set TWILIO_AUTH_TOKEN before exposing this endpoint to the public internet.',
-    );
-    return; // Allow through (dev/test only).
-  }
 
-  const signature = request.headers['x-twilio-signature'];
-  const signatureStr = Array.isArray(signature) ? signature[0] : signature;
-  if (!signatureStr) {
-    logger.warn({ url: request.url }, 'Missing X-Twilio-Signature header');
-    return reply.status(401).send({ error: 'Missing Twilio signature' });
-  }
+    const signature = request.headers['x-twilio-signature'];
+    const signatureStr = Array.isArray(signature) ? signature[0] : signature;
+    if (!signatureStr) {
+      logger.warn({ url: request.url }, 'Missing X-Twilio-Signature header');
+      return reply.status(401).send({ error: 'Missing Twilio signature' });
+    }
 
-  // Reconstruct the URL Twilio used to sign the request. Honour the
-  // X-Forwarded-Proto/Host headers because reverse proxies (Caddy, Cloudflare
-  // Tunnel) terminate TLS and the inner Fastify only sees `http`.
-  const protoHeader = request.headers['x-forwarded-proto'];
-  const proto = (Array.isArray(protoHeader) ? protoHeader[0] : protoHeader) ?? 'https';
-  const hostHeader = request.headers['host'];
-  const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) ?? 'localhost';
-  const url = `${proto}://${host}${request.url}`;
-  const params =
-    typeof request.body === 'object' && request.body !== null
-      ? (request.body as Record<string, string>)
-      : {};
+    // Reconstruct the URL Twilio used to sign the request. Honour the
+    // X-Forwarded-Proto/Host headers because reverse proxies (Caddy, Cloudflare
+    // Tunnel) terminate TLS and the inner Fastify only sees `http`.
+    const protoHeader = request.headers['x-forwarded-proto'];
+    const proto = (Array.isArray(protoHeader) ? protoHeader[0] : protoHeader) ?? 'https';
+    const hostHeader = request.headers['host'];
+    const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) ?? 'localhost';
+    const url = `${proto}://${host}${request.url}`;
+    const params =
+      typeof request.body === 'object' && request.body !== null
+        ? (request.body as Record<string, string>)
+        : {};
 
-  const valid = twilio.validateRequest(authToken, signatureStr, url, params);
-  if (!valid) {
-    logger.warn({ url }, 'Invalid Twilio signature');
-    return reply.status(401).send({ error: 'Invalid Twilio signature' });
-  }
-};
+    const valid = twilio.validateRequest(authToken, signatureStr, url, params);
+    if (!valid) {
+      logger.warn({ url }, 'Invalid Twilio signature');
+      return reply.status(401).send({ error: 'Invalid Twilio signature' });
+    }
+  };
+}
 
 /**
  * Per-route rate-limit config: 60 requests/minute/IP. Matches the guidance
@@ -196,6 +208,9 @@ const inboundRateLimitConfig = {
 
 export async function twilioInboundRoutes(fastify: FastifyInstance): Promise<void> {
   const services = (fastify as unknown as { services: ServicesShape }).services;
+  const verifyTwilioSignature = makeVerifyTwilioSignature(() =>
+    services.twilioVoiceProvider.getAuthToken(),
+  );
 
   fastify.post(
     '/inbound',

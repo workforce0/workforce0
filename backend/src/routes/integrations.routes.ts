@@ -117,6 +117,14 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
       connectedBy: userId,
     });
 
+    // Twilio is read by a long-lived provider for voice dial-in + voice
+    // intake signature verification. Reload it so the freshly saved creds
+    // take effect without a backend restart — this is the whole point of
+    // moving Twilio off env-first config (issue #44).
+    if (name === 'twilio') {
+      await fastify.services.twilioVoiceProvider.reload();
+    }
+
     logger.info('Integration connected via wizard', { tenantId, name, userId });
     return reply.send({ success: true, data: connection });
   });
@@ -151,6 +159,14 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     }
     const tenantId = (request as FastifyRequest & { tenantId: string }).tenantId;
     await fastify.services.integrationConnectionService.disconnect(tenantId, name);
+
+    // Mirror of the /connect handler — clear the live provider so subsequent
+    // voice calls return 503 instead of using stale creds from the previous
+    // connection. Without this, an exec who clicked Disconnect would still
+    // see calls being placed/answered until the next backend restart.
+    if (name === 'twilio') {
+      await fastify.services.twilioVoiceProvider.reload();
+    }
     return reply.send({ success: true });
   });
 }

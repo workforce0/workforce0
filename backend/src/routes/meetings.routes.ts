@@ -455,7 +455,11 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
       const tenantId = (request as FastifyRequest & { tenantId: string }).tenantId;
       const { id } = request.params;
 
-      if (!fastify.services.twilioVoiceService) {
+      // Read the live service from the provider — settings saves rebuild
+      // it without a restart, so the boot-time `twilioVoiceService` field
+      // would be stale here.
+      const twilioVoiceService = fastify.services.twilioVoiceProvider.getCurrent();
+      if (!twilioVoiceService) {
         return reply.status(503).send({
           success: false,
           error: {
@@ -493,7 +497,7 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
       });
 
       try {
-        const callSid = await fastify.services.twilioVoiceService.dialIntoMeeting(
+        const callSid = await twilioVoiceService.dialIntoMeeting(
           id,
           body.dialInNumber,
           body.accessCode,
@@ -542,10 +546,11 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
         });
       }
 
-      if (fastify.services.twilioVoiceService) {
+      const twilioVoiceServiceForLeave = fastify.services.twilioVoiceProvider.getCurrent();
+      if (twilioVoiceServiceForLeave) {
         const callSid = (meeting.metadata as Record<string, unknown>)?.callSid as string;
         if (callSid) {
-          await fastify.services.twilioVoiceService.hangup(callSid);
+          await twilioVoiceServiceForLeave.hangup(callSid);
         }
       }
 
