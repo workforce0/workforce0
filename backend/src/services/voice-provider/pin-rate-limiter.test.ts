@@ -9,16 +9,25 @@ vi.mock('../../lib/logger.js', () => ({
 
 interface FakeRedis {
   get(k: string): Promise<string | null>;
-  incr(k: string): Promise<number>;
-  expire(k: string, sec: number): Promise<void>;
+  // The implementation drives INCR + EXPIRE through a single Lua script,
+  // so the fake exposes a script runner instead of `incr`/`expire`.
+  eval(
+    script: string,
+    numKeys: number,
+    ...args: (string | number)[]
+  ): Promise<number>;
 }
 
 const buildRedis = (): FakeRedis => {
   const store = new Map<string, number>();
   return {
     get: async (k) => (store.has(k) ? String(store.get(k)) : null),
-    incr: async (k) => { const v = (store.get(k) ?? 0) + 1; store.set(k, v); return v; },
-    expire: async () => undefined,
+    eval: async (_script, _numKeys, ...args) => {
+      const k = String(args[0]);
+      const v = (store.get(k) ?? 0) + 1;
+      store.set(k, v);
+      return v;
+    },
   };
 };
 

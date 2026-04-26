@@ -19,12 +19,22 @@ export class CallerAuthService {
   ) {}
 
   async checkCallerId(tenantId: string, fromNumber: string): Promise<CallerCheckResult> {
+    // Twilio normally sends `From` as an E.164 string, but a malformed payload
+    // (or a future caller passing a non-string) would crash on `.trim()` here.
+    // Treat anything that isn't a non-empty string as "not configured" so the
+    // route returns <Hangup/> instead of leaking a 500 to the caller.
+    const trimmed =
+      typeof fromNumber === 'string' && fromNumber.length > 0
+        ? fromNumber.trim()
+        : '';
+    if (trimmed === '') return 'not_configured';
+
     const settings = await this.prisma.tenantSettings.findUnique({ where: { tenantId } });
     if (!settings) return 'not_configured';
     const hasAllowlist = settings.voiceCallerAllowlist.length > 0;
     const hasPin = !!settings.voicePinHash;
     if (!hasAllowlist && !hasPin) return 'not_configured';
-    if (hasAllowlist && settings.voiceCallerAllowlist.includes(fromNumber.trim())) {
+    if (hasAllowlist && settings.voiceCallerAllowlist.includes(trimmed)) {
       return 'allowed';
     }
     if (hasPin) return 'needs_pin';

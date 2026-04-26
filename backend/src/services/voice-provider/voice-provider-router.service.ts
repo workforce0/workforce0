@@ -9,7 +9,15 @@ import { createChildLogger } from '../../lib/logger.js';
 import type { VoiceProvider, VoiceProviderId } from './voice-provider.types.js';
 
 const logger = createChildLogger({ service: 'VoiceProviderRouter' });
-const DEFAULT_ORDER: VoiceProviderId[] = ['pipecat', 'gemini', 'openai'];
+// NOTE: gemini/openai realtime providers were temporarily removed from the
+// default rotation. Their wrapped session adapters do not yet emit the `'end'`
+// event the providers wait for, so they would hang on transcript completion
+// rather than fall through. Until that wiring is finished, the router only
+// considers `pipecat` (local STT/LLM/TTS) by default. A tenant can still
+// explicitly select `gemini` or `openai` via `voiceProviderId` settings —
+// the router will try the preferred provider first, then fall through to the
+// default chain (pipecat only) if it is unavailable.
+const DEFAULT_ORDER: VoiceProviderId[] = ['pipecat'];
 
 interface TenantSettingsLike {
   get(tenantId: string): Promise<{ voiceProviderId: VoiceProviderId | null }>;
@@ -40,8 +48,11 @@ export class VoiceProviderRouter {
           return provider;
         }
       } catch (err) {
+        // `err` may be a non-Error throw (string, number, plain object). Normalize.
+        const message =
+          err instanceof Error ? err.message : String(err);
         logger.warn(
-          { tenantId, providerId: id, err: (err as Error).message },
+          { tenantId, providerId: id, err: message },
           'isAvailable threw; skipping',
         );
       }
