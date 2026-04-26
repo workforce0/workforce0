@@ -148,7 +148,7 @@ export class CallerAuthService {
 ```
 
 - Allowlist + PIN stored on `TenantSettings` (additive migration: `voiceCallerAllowlist String[]`, `voicePinHash String?`).
-- PIN verification uses `crypto.timingSafeEqual` against stored bcrypt/argon2 hash.
+- PIN verification uses `argon2.verify(hash, plaintext)` against the stored argon2id hash (or `bcrypt.compare(plaintext, hash)` if bcrypt is chosen instead). `crypto.timingSafeEqual` is not appropriate here — argon2/bcrypt hashes embed a salt and parameters and are not equal-length-comparable to a plaintext PIN.
 - Failure rate-limit: 3 PIN attempts per `tenantId+from` per hour, tracked in Redis.
 
 ### Pipecat sidecar (Python)
