@@ -68,6 +68,12 @@ services:
       # Local storage lives under /app/data/uploads inside the container.
       # The volume below persists uploads across container restarts.
       STORAGE_ROOT: /app/data/uploads
+      # Voice intake (local-voice profile). Bridge URL points at the
+      # pipecat-bridge sidecar; BRIDGE_JWT_SECRET is shared with the bridge
+      # for short-lived call tokens. Both default-empty when local-voice is
+      # not active so the backend continues to start.
+      PIPECAT_BRIDGE_URL: ${PIPECAT_BRIDGE_URL:-http://pipecat-bridge:8400}
+      BRIDGE_JWT_SECRET: ${BRIDGE_JWT_SECRET:-}
     volumes:
       # Meeting audio/video uploads for the local storage driver. Not used
       # when STORAGE_DRIVER=s3 — safe to keep mounted either way.
@@ -147,6 +153,65 @@ services:
   # for nested settings on the WhisperConfig model. Single underscores are
   # silently ignored. Source:
   # https://github.com/fedirz/faster-whisper-server/blob/v0.5.0/src/faster_whisper_server/config.py
+  # ---------------------------------------------------------------------------
+  # Kokoro TTS (local-voice profile, opt-in via COMPOSE_PROFILES=local-voice)
+  # ---------------------------------------------------------------------------
+  # TODO(image-verify): The `ghcr.io/remsky/kokoro-fastapi:latest` tag is the
+  # canonical published image per the Kokoro-FastAPI README, but anonymous
+  # GHCR manifest fetch returns 401 so the tag could not be confirmed at
+  # compose-write time. If pull fails at deploy, fall back to a Docker Hub
+  # search ("remsky/kokoro-fastapi") or build locally from the upstream repo
+  # (https://github.com/remsky/Kokoro-FastAPI) and replace this `image:` line
+  # with a `build:` block.
+  kokoro-tts:
+    image: ghcr.io/remsky/kokoro-fastapi:latest
+    container_name: workforce0-kokoro-tts
+    restart: unless-stopped
+    profiles: ["local-voice"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8880/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - workforce0
+
+  # ---------------------------------------------------------------------------
+  # Pipecat bridge (local-voice profile)
+  # ---------------------------------------------------------------------------
+  # Python sidecar that wires Whisper STT → Ollama LLM → Kokoro TTS into a
+  # Pipecat pipeline. Backend mints short-lived JWTs for the WebSocket
+  # call-bridge using BRIDGE_JWT_SECRET (must match the bridge's value).
+  # When local-voice is active, BRIDGE_JWT_SECRET is required.
+  pipecat-bridge:
+    build:
+      context: ./infra/pipecat-bridge
+      dockerfile: Dockerfile
+    container_name: workforce0-pipecat-bridge
+    restart: unless-stopped
+    profiles: ["local-voice"]
+    environment:
+      WHISPER_BASE_URL: http://whisper:8000
+      OLLAMA_BASE_URL: http://ollama:11434
+      KOKORO_BASE_URL: http://kokoro-tts:8880
+      BRIDGE_JWT_SECRET: ${BRIDGE_JWT_SECRET:?BRIDGE_JWT_SECRET is required when local-voice is active}
+    depends_on:
+      whisper:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      kokoro-tts:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8400/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - workforce0
+
   whisper:
     image: fedirz/faster-whisper-server:0.5.0-cpu
     container_name: workforce0-whisper
