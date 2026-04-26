@@ -57,6 +57,16 @@ export interface VoiceMediaStreamDeps {
   queueService: {
     addJob(name: string, payload: unknown): Promise<string>;
   };
+  /**
+   * Optional CallContext store written by the Twilio inbound webhook. The WS
+   * upgrade carries no body, so the `From` E.164 number is recovered here by
+   * CallSid. When absent (e.g. unit-test stubs), `callerNumber` falls back to
+   * the empty string and downstream consumers handle that case gracefully.
+   */
+  callContextStore?: {
+    get(callSid: string): { fromNumber: string; toNumber: string } | null;
+    delete(callSid: string): void;
+  };
 }
 
 /**
@@ -103,7 +113,16 @@ async function handleConnection(
   const callSid = decodeURIComponent(match[1]);
 
   const tenantId = await deps.tenantResolver.resolveTenantByCallSid(callSid);
-  logger.info({ callSid, tenantId }, 'Voice media stream opened');
+  // Recover caller metadata stashed by the inbound webhook. Twilio's WS
+  // upgrade carries no body, and the start frame arrives a few hundred ms
+  // later — recovering from the store lets us call startSession synchronously
+  // with the real From E.164 number.
+  const callCtx = deps.callContextStore?.get(callSid) ?? null;
+  const callerNumber = callCtx?.fromNumber ?? '';
+  logger.info(
+    { callSid, tenantId, hasCallerNumber: !!callerNumber },
+    'Voice media stream opened',
+  );
 
   const provider = await deps.voiceProviderRouter.resolveProvider(tenantId);
   if (!provider) {
@@ -115,7 +134,7 @@ async function handleConnection(
   const handle = await provider.startSession({
     callId: callSid,
     tenantId,
-    callerNumber: '',
+    callerNumber,
     audioInWs: ws,
     systemPrompt: INTAKE_SYSTEM_PROMPT,
   });
@@ -129,7 +148,7 @@ async function handleConnection(
       const meeting = await deps.meetingService.createFromVoiceTranscript({
         tenantId,
         callId: callSid,
-        callerNumber: '',
+        callerNumber,
         transcript,
       });
       await deps.queueService.addJob('meeting_process', {
@@ -153,9 +172,14 @@ async function handleConnection(
   });
 
   ws.on('close', () => {
+    // Best-effort cleanup of the call-context entry — it has its own TTL
+    // sweep so a missed delete doesn't leak permanently, but freeing eagerly
+    // keeps the live set tight.
+    deps.callContextStore?.delete(callSid);
     void handle.stop().catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
       logger.warn(
-        { callSid, err: (err as Error).message },
+        { callSid, err: message },
         'Error stopping voice session on WS close',
       );
     });
