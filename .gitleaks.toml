@@ -19,7 +19,7 @@ useDefault = true
 [allowlist]
 description = "Test fixtures and planning docs containing fake secrets"
 paths = [
-  '''^infra/pipecat-bridge/tests/.*''',
-  '''^docs/superpowers/plans/.*''',
-  '''^docs/superpowers/specs/.*''',
+  '''^infra/pipecat-bridge/tests/test_auth\.py$''',
+  '''^infra/pipecat-bridge/tests/test_synthetic\.py$''',
+  '''^docs/superpowers/plans/2026-04-25-voice-intake-pipecat\.md$''',
 ]
