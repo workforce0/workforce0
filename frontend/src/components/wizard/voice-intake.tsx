@@ -58,10 +58,15 @@ export function VoiceIntake({
             />
             <input
               type="password"
-              placeholder="Fallback PIN (4 digits, optional)"
-              maxLength={4}
+              inputMode="numeric"
+              pattern="[0-9]{4,}"
+              placeholder="Fallback PIN (4+ digits, optional)"
+              maxLength={8}
               value={value.pin ?? ""}
-              onChange={(e) => onChange({ ...value, pin: e.target.value || undefined })}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                onChange({ ...value, pin: digits || undefined });
+              }}
               className="w-full border p-2 rounded text-sm"
             />
           </div>
