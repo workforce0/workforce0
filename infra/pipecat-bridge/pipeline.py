@@ -94,27 +94,41 @@ class VoicePipeline:
         Twilio sends ~50 frames/sec; running a full STT→LLM→TTS turn per frame
         was the prior bug. We accumulate until a `_SILENCE_TRIGGER_MS` window
         of below-threshold audio elapses, then flush as one utterance.
+
+        Pre-speech silence is *not* buffered: an inbound caller often takes
+        a few seconds to start speaking, and accumulating that hush would
+        bloat the STT payload without benefit. We only start buffering once
+        an above-threshold frame arrives (`_has_voiced` flag).
         """
         if not audio:
             return
 
-        if self._utt_started_ms is None:
-            self._utt_started_ms = self._elapsed_ms()
-
-        self._utt_buf.extend(audio)
-
         rms = _rms_int16(audio)
         frame_ms = self._frame_duration_ms(audio)
+
         if rms >= _ENERGY_THRESHOLD:
+            # First voiced frame in this utterance — anchor the start time
+            # to *now* (not to whenever silence first arrived) so startMs
+            # reflects when the caller actually spoke.
+            if not self._has_voiced:
+                self._utt_started_ms = self._elapsed_ms()
             self._has_voiced = True
             self._silence_ms = 0
+            self._utt_buf.extend(audio)
             return
 
-        # Below threshold — accumulate silence
+        # Below threshold. If the caller hasn't started speaking yet, drop
+        # the frame entirely — no point buffering pre-speech silence.
+        if not self._has_voiced:
+            return
+
+        # Voice has started; trailing silence still counts toward the
+        # utterance (it's how natural pauses end up in the STT payload)
+        # and toward the silence-trigger countdown.
+        self._utt_buf.extend(audio)
         self._silence_ms += frame_ms
         if (
-            self._has_voiced
-            and self._silence_ms >= _SILENCE_TRIGGER_MS
+            self._silence_ms >= _SILENCE_TRIGGER_MS
             and len(self._utt_buf) >= _MIN_UTTERANCE_BYTES
         ):
             await self._flush_utterance(on_audio, on_transcript)
