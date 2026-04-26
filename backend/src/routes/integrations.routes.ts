@@ -130,8 +130,13 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
       try {
         await fastify.services.twilioVoiceProvider.reload();
       } catch (err) {
+        // Deliberately do NOT log err.message — Twilio auth errors can
+        // surface the token in the exception text, and CodeQL flags
+        // `err.message` here as js/clear-text-logging. The error class
+        // is enough signal to investigate; full detail can be obtained
+        // by reproducing locally with DEBUG=1.
         logger.error(
-          { tenantId, err: (err as Error).message },
+          { tenantId, errorType: (err as Error).constructor?.name ?? 'Error' },
           'Twilio provider reload failed after connect — creds saved, restart to activate',
         );
       }
@@ -180,8 +185,9 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
       try {
         await fastify.services.twilioVoiceProvider.reload();
       } catch (err) {
+        // See connect handler — same rationale, no err.message in logs.
         logger.error(
-          { tenantId, err: (err as Error).message },
+          { tenantId, errorType: (err as Error).constructor?.name ?? 'Error' },
           'Twilio provider reload failed after disconnect — DB row removed, restart to fully clear in-memory service',
         );
       }
