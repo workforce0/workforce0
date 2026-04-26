@@ -33,13 +33,20 @@ export interface OpenAIRealtimeProviderConfig {
   sessionFactory: () => OpenAISessionLike;
 }
 
+// NOTE: This provider's session adapter does NOT emit `'end'` on hangup.
+// Transcript completion callbacks will never fire. The provider is intentionally
+// NOT registered in di-container.ts until that wiring lands. Kept here for the
+// future Step 1 wiring. `isAvailable()` is gated to false defense-in-depth so
+// even if the registration is restored prematurely, the router skips it.
 export class OpenAIRealtimeProvider implements VoiceProvider {
   readonly id: VoiceProviderId = 'openai';
 
   constructor(private readonly config: OpenAIRealtimeProviderConfig) {}
 
   async isAvailable(): Promise<boolean> {
-    return typeof this.config.apiKey === 'string' && this.config.apiKey.length > 0;
+    // Gate to false until transcript wiring works (see class doc above).
+    void this.config; // keep `config` referenced for the future re-enable.
+    return false;
   }
 
   async startSession(input: VoiceSessionInput): Promise<VoiceSessionHandle> {

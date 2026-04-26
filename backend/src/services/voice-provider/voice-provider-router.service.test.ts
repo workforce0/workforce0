@@ -38,12 +38,10 @@ describe('VoiceProviderRouter', () => {
     expect(p?.id).toBe('gemini');
   });
 
-  it('falls through default order (pipecat) when preferred is unavailable', async () => {
-    // DEFAULT_ORDER currently only contains `pipecat` — gemini/openai are
-    // explicitly excluded from the default rotation until their session
-    // adapters emit transcript completion. So when the preferred provider
-    // (`gemini` here) is unavailable AND it is not in the default chain, the
-    // router falls through to pipecat.
+  it('falls through default order when preferred is unavailable', async () => {
+    // DEFAULT_ORDER is `['pipecat', 'gemini', 'openai']`. With preferred
+    // `gemini` unavailable, the router tries pipecat next (default first),
+    // then would fall through to openai. pipecat is up, so it wins.
     const r = new VoiceProviderRouter(
       [fake('pipecat', true), fake('gemini', false), fake('openai', true)],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,17 +51,31 @@ describe('VoiceProviderRouter', () => {
     expect(p?.id).toBe('pipecat');
   });
 
-  it('returns null when preferred is unavailable AND default chain is unavailable', async () => {
-    // With pipecat-only DEFAULT_ORDER, an unavailable pipecat means no
-    // provider is reachable even if gemini/openai are technically up — they
-    // are not part of the default rotation.
+  it('falls through to gemini when pipecat is unavailable', async () => {
+    // Practical safety net: in production di-container only registers pipecat,
+    // so this case is only reachable if a future wiring registers gemini too.
+    // The router's behaviour is what matters here — DEFAULT_ORDER skips
+    // unavailable entries.
     const r = new VoiceProviderRouter(
       [fake('pipecat', false), fake('gemini', true), fake('openai', true)],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       settings(null) as any,
     );
     const p = await r.resolveProvider('t1');
-    expect(p).toBeNull();
+    expect(p?.id).toBe('gemini');
+  });
+
+  it('silently skips IDs in DEFAULT_ORDER that are not registered', async () => {
+    // Mirrors the production di-container today: only pipecat is registered.
+    // gemini/openai are in DEFAULT_ORDER conceptually but the router skips
+    // them because `providers.get('gemini')` returns undefined.
+    const r = new VoiceProviderRouter(
+      [fake('pipecat', true)],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      settings(null) as any,
+    );
+    const p = await r.resolveProvider('t1');
+    expect(p?.id).toBe('pipecat');
   });
 
   it('returns null when all unavailable', async () => {

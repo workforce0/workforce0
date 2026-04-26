@@ -1310,35 +1310,41 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     return ee;
   };
 
-  // NOTE: gemini/openai realtime providers are still constructed here so a
-  // tenant who explicitly opts in via `voiceProviderId` settings can still
-  // exercise them. They are NOT in the router's DEFAULT_ORDER (see
-  // voice-provider-router.service.ts) until their session adapters emit
-  // transcript completion — currently the wrapped GeminiLiveClient /
-  // OpenAIRealtimeClient never fire `'end'`, so a default chain that included
-  // them would hang on transcript completion instead of falling through.
-  const geminiRealtime = new GeminiRealtimeProvider({
-    apiKey: config.GEMINI_API_KEY,
-    sessionFactory: geminiSessionFactory,
-  });
-  const openaiRealtime = new OpenAIRealtimeProvider({
-    apiKey: config.OPENAI_API_KEY,
-    sessionFactory: openaiSessionFactory,
-  });
+  // TODO(voice-intake-step1): re-enable Gemini/OpenAI provider registration
+  // when their session adapters emit `'end'` for transcript completion. Right
+  // now the wrapped GeminiLiveClient / OpenAIRealtimeClient never fire `'end'`,
+  // so registering them would let `tenant.voiceProviderId === 'gemini'` route
+  // to a provider that hangs on hangup instead of falling through. The
+  // factories above (geminiSessionFactory / openaiSessionFactory) and the
+  // provider classes themselves are kept for the future wiring; they're just
+  // not put in `registeredProviders` here.
+  //
+  // Defense-in-depth: gemini-realtime.provider.ts and openai-realtime.provider.ts
+  // also gate `isAvailable()` to `false`, so even if these registrations are
+  // restored prematurely the router will skip them.
+  //
+  // const geminiRealtime = new GeminiRealtimeProvider({
+  //   apiKey: config.GEMINI_API_KEY,
+  //   sessionFactory: geminiSessionFactory,
+  // });
+  // const openaiRealtime = new OpenAIRealtimeProvider({
+  //   apiKey: config.OPENAI_API_KEY,
+  //   sessionFactory: openaiSessionFactory,
+  // });
 
   // Pipecat provider is the only one in the default rotation. If the JWT
   // secret is empty/undefined (e.g. local-voice profile not active in the
   // wizard), do NOT register it — the router will then resolve `null` and
   // the media-stream WS handler will close the upgrade with a logged warning.
   const bridgeJwtSecret = config.BRIDGE_JWT_SECRET;
-  const registeredProviders: VoiceProvider[] = [geminiRealtime, openaiRealtime];
+  const registeredProviders: VoiceProvider[] = [];
   if (bridgeJwtSecret && bridgeJwtSecret.length >= 32) {
     const pipecatProvider = new PipecatProvider({
       bridgeBaseUrl: config.PIPECAT_BRIDGE_URL,
       jwtSecret: bridgeJwtSecret,
       wsFactory: (url) => new WebSocket(url) as unknown as import('ws').WebSocket,
     });
-    registeredProviders.unshift(pipecatProvider);
+    registeredProviders.push(pipecatProvider);
     logger.info(
       { bridgeBaseUrl: config.PIPECAT_BRIDGE_URL },
       'Pipecat voice provider registered',

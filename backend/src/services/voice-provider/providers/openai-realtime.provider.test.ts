@@ -25,14 +25,18 @@ class FakeOpenAISession extends EventEmitter {
 const buildSession = () => new FakeOpenAISession();
 
 describe('OpenAIRealtimeProvider', () => {
-  it('isAvailable returns false when no API key', async () => {
+  it('isAvailable returns false when no API key (provider gated off)', async () => {
     const p = new OpenAIRealtimeProvider({ apiKey: undefined, sessionFactory: buildSession });
     await expect(p.isAvailable()).resolves.toBe(false);
   });
 
-  it('isAvailable returns true when API key set', async () => {
+  it('isAvailable returns false even when API key is set (transcript wiring not ready)', async () => {
+    // Defense-in-depth gate: until the session adapter emits `'end'`, this
+    // provider stays off so a stray `tenant.voiceProviderId === 'openai'`
+    // doesn't route to a session that hangs on hangup. See the class doc on
+    // OpenAIRealtimeProvider for the re-enable path.
     const p = new OpenAIRealtimeProvider({ apiKey: 'k', sessionFactory: buildSession });
-    await expect(p.isAvailable()).resolves.toBe(true);
+    await expect(p.isAvailable()).resolves.toBe(false);
   });
 
   it('startSession returns a handle that calls underlying stop()', async () => {
