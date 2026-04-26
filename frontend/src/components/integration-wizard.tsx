@@ -35,7 +35,8 @@ export type IntegrationName =
   | "github"
   | "linear"
   | "notion"
-  | "gchat";
+  | "gchat"
+  | "twilio";
 
 interface FieldSpec {
   key: string;
@@ -235,6 +236,56 @@ const INTEGRATION_SPECS: Record<IntegrationName, IntegrationSpec> = {
             key: "webhookUrl",
             label: "Webhook URL",
             placeholder: "https://chat.googleapis.com/v1/spaces/...",
+            type: "password",
+          },
+        ],
+      },
+    },
+  },
+  // Field `key`s here MUST match the credential keys the backend's
+  // Twilio tester reads (see backend/src/lib/di-container.ts —
+  // `integrationConnectionService.registerTester('twilio', …)`):
+  // twilioAccountSid, twilioAuthToken, twilioPhoneNumber.
+  twilio: {
+    title: "Connect Twilio Voice",
+    tokenPageUrl: "https://console.twilio.com",
+    tokenPageLabel: "Open Twilio console",
+    steps: {
+      identifier: {
+        heading: "What's your Twilio account?",
+        subtitle: "Find these in your Twilio console — they take 30 seconds to copy.",
+        fields: [
+          {
+            key: "twilioAccountSid",
+            label: "Account SID",
+            placeholder: "AC...",
+            type: "text",
+            helper: "Top-right of console.twilio.com — starts with AC.",
+          },
+          {
+            key: "twilioPhoneNumber",
+            label: "Twilio phone number",
+            placeholder: "+15551234567",
+            type: "text",
+            helper:
+              "The number people will dial to reach you (or that the AI will dial out from). Use E.164 format with the country code.",
+          },
+        ],
+      },
+      token: {
+        heading: "Paste your Auth Token",
+        subtitle:
+          "This lets Workforce0 receive inbound calls and place outbound dial-ins. Stored encrypted; never logged.",
+        instructions: [
+          "Open the Twilio console — the link is the button below.",
+          'Find "Auth Token" right under your Account SID, click "View".',
+          "Copy the full token and paste it here.",
+        ],
+        fields: [
+          {
+            key: "twilioAuthToken",
+            label: "Auth Token",
+            placeholder: "32-character hex string",
             type: "password",
           },
         ],
