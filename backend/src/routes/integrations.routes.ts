@@ -121,8 +121,20 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     // intake signature verification. Reload it so the freshly saved creds
     // take effect without a backend restart — this is the whole point of
     // moving Twilio off env-first config (issue #44).
+    //
+    // Wrap in try/catch: a reload failure should not turn a successful
+    // DB write into a 500. Worst case the operator restarts the backend
+    // (or hits the test endpoint, which forces a re-read) and creds
+    // still take effect.
     if (name === 'twilio') {
-      await fastify.services.twilioVoiceProvider.reload();
+      try {
+        await fastify.services.twilioVoiceProvider.reload();
+      } catch (err) {
+        logger.error(
+          { tenantId, err: (err as Error).message },
+          'Twilio provider reload failed after connect — creds saved, restart to activate',
+        );
+      }
     }
 
     logger.info('Integration connected via wizard', { tenantId, name, userId });
@@ -165,7 +177,14 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     // connection. Without this, an exec who clicked Disconnect would still
     // see calls being placed/answered until the next backend restart.
     if (name === 'twilio') {
-      await fastify.services.twilioVoiceProvider.reload();
+      try {
+        await fastify.services.twilioVoiceProvider.reload();
+      } catch (err) {
+        logger.error(
+          { tenantId, err: (err as Error).message },
+          'Twilio provider reload failed after disconnect — DB row removed, restart to fully clear in-memory service',
+        );
+      }
     }
     return reply.send({ success: true });
   });

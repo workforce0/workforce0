@@ -1759,9 +1759,13 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   app.addHook('onClose', async () => {
     logger.info('Closing connections and stopping services...');
 
-    // End all active Twilio calls
-    if (twilioVoiceService) {
-      await twilioVoiceService.endAllCalls();
+    // End all active Twilio calls — read the live service from the
+    // provider, not the boot-time `twilioVoiceService` snapshot. If creds
+    // were rotated mid-process via the integrations UI, calls placed on
+    // the new service instance would otherwise leak past shutdown.
+    const liveTwilio = twilioVoiceProvider.getCurrent();
+    if (liveTwilio) {
+      await liveTwilio.endAllCalls();
     }
 
     // Close all SSE connections and stop heartbeat

@@ -160,6 +160,28 @@ describe('TwilioVoiceProvider', () => {
     expect(provider.getAuthToken()).toBeNull();
   });
 
+  it('rejects empty-string DB creds and falls back to env (Cubic P2 on PR #45)', async () => {
+    // Simulate a partially-filled wizard form persisting blank fields.
+    const partialDbCreds = {
+      twilioAccountSid: 'AC_db_sid',
+      twilioAuthToken: '',
+      twilioPhoneNumber: '+15552222222',
+      webhookBaseUrl: 'https://db-host.example.com',
+    };
+    const ics = makeFakeIcs(partialDbCreds);
+    const provider = new TwilioVoiceProvider({
+      tenantId: 'default',
+      integrationConnectionService: ics as never,
+      envCreds: ENV_DEFAULTS,
+    });
+    await provider.reload();
+    const svc = provider.getCurrent();
+    // Should fall back to env, not build a broken service from the
+    // empty-token row.
+    expect(svc?.getPhoneNumber()).toBe(ENV_DEFAULTS.TWILIO_PHONE_NUMBER);
+    expect(provider.getAuthToken()).toBe(ENV_DEFAULTS.TWILIO_AUTH_TOKEN);
+  });
+
   it('clears the service when DB creds are removed (operator disconnected Twilio)', async () => {
     const ics = makeFakeIcs(DB_CREDS);
     const provider = new TwilioVoiceProvider({

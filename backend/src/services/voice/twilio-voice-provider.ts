@@ -95,19 +95,27 @@ function pickFromDb(creds: Record<string, unknown> | null): TwilioVoiceConfig | 
   // handler — uses twilioAccountSid / twilioAuthToken). webhookBaseUrl is
   // tenant-scoped here because each tenant might run behind a different
   // public hostname (e.g. their own Cloudflare tunnel).
+  //
+  // Reject empty strings the same way pickFromEnv does — the integrations
+  // UI may persist a partially-filled form, and a service built from
+  // empty creds will 401 on every Twilio API call instead of failing
+  // closed at boot.
   const accountSid = creds.twilioAccountSid;
   const authToken = creds.twilioAuthToken;
   const phoneNumber = creds.twilioPhoneNumber;
   const webhookBaseUrl = creds.webhookBaseUrl;
-  if (
-    typeof accountSid !== 'string' ||
-    typeof authToken !== 'string' ||
-    typeof phoneNumber !== 'string' ||
-    typeof webhookBaseUrl !== 'string'
-  ) {
-    return null;
-  }
-  return { accountSid, authToken, phoneNumber, webhookBaseUrl };
+  const allFilled =
+    typeof accountSid === 'string' && accountSid.length > 0 &&
+    typeof authToken === 'string' && authToken.length > 0 &&
+    typeof phoneNumber === 'string' && phoneNumber.length > 0 &&
+    typeof webhookBaseUrl === 'string' && webhookBaseUrl.length > 0;
+  if (!allFilled) return null;
+  return {
+    accountSid: accountSid as string,
+    authToken: authToken as string,
+    phoneNumber: phoneNumber as string,
+    webhookBaseUrl: webhookBaseUrl as string,
+  };
 }
 
 function pickFromEnv(env: TwilioEnvFallback): TwilioVoiceConfig | null {
@@ -151,7 +159,15 @@ export class TwilioVoiceProvider {
         return null;
       });
 
-    const next = pickFromDb(fromDb) ?? pickFromEnv(this.opts.envCreds);
+    // Resolve in two steps so the log can report which branch actually
+    // produced the config — DB record may exist but be partially filled,
+    // in which case we silently fall through to env. Reporting "source:
+    // integration_connection" in that case would be a lie (and confused
+    // a Cubic review on PR #45).
+    const fromDbConfig = pickFromDb(fromDb);
+    const next = fromDbConfig ?? pickFromEnv(this.opts.envCreds);
+    const source: 'integration_connection' | 'env_fallback' | 'none' =
+      fromDbConfig ? 'integration_connection' : next ? 'env_fallback' : 'none';
     const nextFp = fingerprint(next);
 
     if (nextFp === this.currentFingerprint) {
@@ -166,7 +182,7 @@ export class TwilioVoiceProvider {
       {
         tenantId: this.opts.tenantId,
         configured: this.current !== null,
-        source: fromDb ? 'integration_connection' : 'env_fallback',
+        source,
       },
       'Twilio voice service reloaded',
     );

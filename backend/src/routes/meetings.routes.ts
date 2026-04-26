@@ -546,12 +546,27 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
         });
       }
 
+      // If a callSid was recorded, the call exists at Twilio's edge and we
+      // must actually hangup before claiming the meeting completed.
+      // Marking it complete without hanging up leaves a billed call live
+      // — the orange-bar bug CodeRabbit flagged.
+      const callSid = (meeting.metadata as Record<string, unknown>)?.callSid as string | undefined;
       const twilioVoiceServiceForLeave = fastify.services.twilioVoiceProvider.getCurrent();
-      if (twilioVoiceServiceForLeave) {
-        const callSid = (meeting.metadata as Record<string, unknown>)?.callSid as string;
-        if (callSid) {
-          await twilioVoiceServiceForLeave.hangup(callSid);
+      if (callSid) {
+        if (!twilioVoiceServiceForLeave) {
+          logger.error(
+            { meetingId: id, callSid },
+            'voice-leave: Twilio provider unavailable but callSid is recorded — refusing to mark meeting completed (live call would be orphaned)',
+          );
+          return reply.status(503).send({
+            success: false,
+            error: {
+              code: 'SERVICE_UNAVAILABLE',
+              message: 'Twilio is not configured; cannot end the active call. Reconnect Twilio in Settings → Integrations and try again.',
+            },
+          });
         }
+        await twilioVoiceServiceForLeave.hangup(callSid);
       }
 
       await fastify.services.prisma.meeting.update({
