@@ -602,8 +602,8 @@ function FeatureGrid() {
     },
     {
       icon: <Phone className="w-5 h-5" aria-hidden />,
-      title: "Voice dial-in",
-      body: "Gemini Live + Twilio Media Stream. Call a number, have a meeting, get a brief. Nothing to install on the attendees' side.",
+      title: "Inbound voice intake",
+      body: "Caller dials your Twilio number, talks to a local agent, brief lands in your queue. Three provider modes — Pipecat (local Whisper + Ollama + Kokoro), Gemini Live, or OpenAI Realtime — with deterministic fallback.",
     },
     {
       icon: <GitBranch className="w-5 h-5" aria-hidden />,
