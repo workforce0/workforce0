@@ -60,3 +60,6 @@ docs-site/.DS_Store
 graphify-out/
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
+
+# Local dev override (host Ollama reuse, dev-only secrets)
+docker-compose.override.yml

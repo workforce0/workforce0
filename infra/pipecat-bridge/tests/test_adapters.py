@@ -69,11 +69,51 @@ async def test_llm_chat_completion():
 
 
 @pytest.mark.asyncio
-async def test_tts_returns_pcm_bytes():
-    _install_mock_client(TTSAdapter, content=b"\x00" * 100)
-    adapter = TTSAdapter("http://kokoro-tts:8880")
-    audio = await adapter.synthesize("hello")
-    assert audio == b"\x00" * 100
+async def test_tts_calls_kokoro_speech_endpoint_with_pcm_request():
+    """Pin the request shape to upstream Kokoro-FastAPI's OpenAI-compat schema.
+
+    A previous version called /v1/audio/synthesize with {text, voice, format} —
+    a fictional endpoint that 404s on the real image. This test asserts we
+    call /v1/audio/speech with {model, input, voice, response_format, stream}
+    so a future regression of that mistake is caught at unit-test time.
+    """
+    # 24 kHz s16le silence — 1 second worth, large enough that ratecv has
+    # something to resample without hitting its small-input degenerate path.
+    pcm_24k_silence = b"\x00\x00" * 24000
+    mock = _install_mock_client(TTSAdapter, content=pcm_24k_silence)
+    adapter = TTSAdapter("http://kokoro-tts:8880", voice="af_heart")
+    audio = await adapter.synthesize("hello world")
+
+    url = mock.post.call_args.args[0]
+    body = mock.post.call_args.kwargs["json"]
+    assert url.endswith("/v1/audio/speech")
+    assert body == {
+        "model": "kokoro",
+        "input": "hello world",
+        "voice": "af_heart",
+        "response_format": "pcm",
+        "stream": False,
+    }
+    # 24 kHz s16le → 8 kHz μ-law: 6× compression. Allow a few-byte slop
+    # from ratecv state but assert the right order of magnitude.
+    assert len(audio) == pytest.approx(len(pcm_24k_silence) // 6, abs=4)
+
+
+def test_pcm24k_to_twilio_mulaw_byte_ratio_and_silence_value():
+    """Direct unit test for the resample/companding helper."""
+    from tts_adapter import pcm24k_to_twilio_mulaw
+
+    # 1 s of s16le silence at 24 kHz = 48000 bytes → ~8000 μ-law bytes.
+    pcm_silence = b"\x00\x00" * 24000
+    out = pcm24k_to_twilio_mulaw(pcm_silence)
+    assert len(out) == pytest.approx(8000, abs=4)
+    # μ-law silence is 0xFF (the encoded value for amplitude 0).
+    # Allow a small startup transient from ratecv but everything settles to
+    # 0xFF for a silent input.
+    silent_count = sum(1 for b in out if b == 0xFF)
+    assert silent_count >= len(out) - 4, (
+        f"expected nearly all μ-law silence (0xFF), got {silent_count}/{len(out)}"
+    )
 
 
 @pytest.mark.asyncio
