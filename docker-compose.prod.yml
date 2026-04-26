@@ -161,24 +161,31 @@ services:
   # ---------------------------------------------------------------------------
   # Kokoro TTS (local-voice profile, opt-in via COMPOSE_PROFILES=local-voice)
   # ---------------------------------------------------------------------------
-  # TODO(image-verify): The `ghcr.io/remsky/kokoro-fastapi:latest` tag is the
-  # canonical published image per the Kokoro-FastAPI README, but anonymous
-  # GHCR manifest fetch returns 401 so the tag could not be confirmed at
-  # compose-write time. If pull fails at deploy, fall back to a Docker Hub
-  # search ("remsky/kokoro-fastapi") or build locally from the upstream repo
-  # (https://github.com/remsky/Kokoro-FastAPI) and replace this `image:` line
-  # with a `build:` block.
+  # Built from a thin wrapper around upstream remsky/Kokoro-FastAPI. The
+  # canonical ghcr.io/remsky/kokoro-fastapi tag is anonymous-fetch
+  # unauthorized (401) so we clone-and-build at image-build time. The pin
+  # in infra/kokoro/Dockerfile fixes a known-good upstream commit; bump it
+  # there when we deliberately upgrade. The build downloads the Kokoro v1_0
+  # weights into the image, so first build is ~10–15 min on CPU.
+  #
+  # Healthcheck note: the upstream image has curl but not wget — the
+  # previous wget-based check left this service permanently in `starting`
+  # status, blocking pipecat-bridge's depends_on.
   kokoro-tts:
-    image: ghcr.io/remsky/kokoro-fastapi:latest
+    build:
+      context: ./infra/kokoro
+      dockerfile: Dockerfile
     container_name: workforce0-kokoro-tts
     restart: unless-stopped
     profiles: ["local-voice"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8880/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8880/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      # Cold-start has to load the model into memory; first call after boot
+      # also re-warms voice packs, hence the long start_period.
+      start_period: 5m
     networks:
       - workforce0
 
@@ -226,15 +233,28 @@ services:
     # rationale — single-profile deploys still get a working voice stack
     # without having to know about transitive dependencies.
     profiles: ["local-stt", "local-voice"]
+    # Default model: `Systran/faster-whisper-small`. Operators who want
+    # higher accuracy at the cost of latency/RAM can set
+    # WHISPER_MODEL=Systran/faster-whisper-large-v3 (or any non-gated CT2
+    # repo). `Systran/faster-whisper-large-v3-turbo` is currently HF-gated
+    # and returns 401 on anonymous pull — do not use it as a default.
     environment:
-      WHISPER__MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}
+      WHISPER__MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       WHISPER__INFERENCE_DEVICE: ${WHISPER_INFERENCE_DEVICE:-auto}
       WHISPER__COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
-      PRELOAD_MODELS: '["${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}"]'
+      PRELOAD_MODELS: '["${WHISPER_MODEL:-Systran/faster-whisper-small}"]'
     volumes:
       - whisper_cache:/root/.cache/huggingface
+    # Healthcheck uses python3 (always present in the slim base) instead of
+    # wget which is not installed; without this the container never reports
+    # healthy and the bridge's depends_on blocks the whole stack.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health || exit 1"]
+      test:
+        - CMD-SHELL
+        - >
+          python3 -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3).status==200 else 1)"
+          || exit 1
       interval: 30s
       timeout: 5s
       retries: 3
