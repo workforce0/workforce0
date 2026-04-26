@@ -1,0 +1,26 @@
+# Gitleaks configuration for workforce0/workforce0
+#
+# Extends the upstream default ruleset (so we still catch real secrets) and
+# allowlists paths that intentionally contain *fake* secrets used in tests
+# and documentation.
+#
+# Why path-based, not fingerprint-based:
+#   * Fingerprints are commit+line specific — every time a test file is
+#     edited the fingerprint changes and CI breaks again. The values in
+#     these paths are obviously-fake test fixtures (e.g.
+#     "test-secret-12345…"), so a path allowlist is the correct shape.
+#
+# If you ADD a real secret-handling test outside these paths it will (and
+# should) trip gitleaks. Don't add app code paths to this allowlist.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and planning docs containing fake secrets"
+paths = [
+  '''^infra/pipecat-bridge/tests/test_auth\.py$''',
+  '''^infra/pipecat-bridge/tests/test_synthetic\.py$''',
+  '''^infra/pipecat-bridge/tests/test_ws_session\.py$''',
+  '''^docs/superpowers/plans/2026-04-25-voice-intake-pipecat\.md$''',
+]

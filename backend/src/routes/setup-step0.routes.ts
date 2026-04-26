@@ -9,7 +9,9 @@
  * @module routes/setup-step0
  */
 
+import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import argon2 from 'argon2';
 import { z } from 'zod';
 import { createChildLogger } from '../lib/logger.js';
 
@@ -19,6 +21,14 @@ const SaveBody = z.object({
   meetingBotProvider: z.enum(['vexa', 'skip']).optional(),
   vexaApiUrl: z.string().url().optional(),
   localTier: z.enum(['light', 'default', 'heavy', 'none']).optional(),
+  voiceIntake: z
+    .object({
+      enabled: z.boolean(),
+      twilioNumber: z.string().optional(),
+      callerAllowlist: z.array(z.string()).default([]),
+      pin: z.string().min(4).max(8).optional(),
+    })
+    .optional(),
 });
 
 interface ServicesShape {
@@ -71,7 +81,7 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
         error: { code: 'INVALID_BODY', message: parsed.error.message },
       });
     }
-    const { meetingBotProvider, localTier } = parsed.data;
+    const { meetingBotProvider, localTier, voiceIntake } = parsed.data;
 
     // Compute envHints — values the user (or setup-finish.sh) needs in .env.
     // Backend container can't write to the host .env, so we return them.
@@ -93,23 +103,47 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
       }[localTier];
       envHints.OLLAMA_DEFAULT_MODEL = tierModel;
     }
+
+    // Voice intake (Plan voice-intake-pipecat). Enabled means: turn on the
+    // local-voice compose profile and surface the env vars the operator
+    // needs to wire Twilio (WEBHOOK_BASE_HOST) and the bridge JWT secret.
+    // PIN gets hashed with argon2 and stored alongside the allowlist on the
+    // tenant row so CallerAuthService can verify against it later.
+    let voicePinHash: string | undefined;
+    if (voiceIntake?.enabled) {
+      profiles.push('local-voice');
+      // Pre-generate a strong shared secret for the bridge so the operator
+      // can paste it directly into .env without having to run openssl.
+      envHints.BRIDGE_JWT_SECRET = crypto.randomBytes(32).toString('hex');
+      // Public hostname Twilio will hit; operator must replace this with
+      // their actual deployment URL.
+      envHints.WEBHOOK_BASE_HOST = 'https://your-deployment.example.com';
+      if (voiceIntake.pin) {
+        voicePinHash = await argon2.hash(voiceIntake.pin);
+      }
+    }
+
     if (profiles.length > 0) {
       envHints.COMPOSE_PROFILES = profiles.join(',');
     }
 
+    const baseSettings = {
+      step0Migrated: true,
+      meetingBotProviderId:
+        meetingBotProvider === 'skip' ? null : meetingBotProvider ?? null,
+    };
+    const voiceSettings: Record<string, unknown> = {};
+    if (voiceIntake?.enabled) {
+      voiceSettings.voiceCallerAllowlist = voiceIntake.callerAllowlist;
+      if (voicePinHash !== undefined) {
+        voiceSettings.voicePinHash = voicePinHash;
+      }
+    }
+
     await services.prisma.tenantSettings.upsert({
       where: { tenantId },
-      update: {
-        step0Migrated: true,
-        meetingBotProviderId:
-          meetingBotProvider === 'skip' ? null : meetingBotProvider ?? null,
-      },
-      create: {
-        tenantId,
-        step0Migrated: true,
-        meetingBotProviderId:
-          meetingBotProvider === 'skip' ? null : meetingBotProvider ?? null,
-      },
+      update: { ...baseSettings, ...voiceSettings },
+      create: { tenantId, ...baseSettings, ...voiceSettings },
     });
 
     // Log only non-sensitive metadata. We deliberately do not log envHints
@@ -121,6 +155,8 @@ export async function setupStep0Routes(fastify: FastifyInstance): Promise<void> 
     const hintKeysLogged = profiles.slice();
     if (envHints.VEXA_API_URL) hintKeysLogged.push('VEXA_API_URL');
     if (envHints.OLLAMA_DEFAULT_MODEL) hintKeysLogged.push('OLLAMA_DEFAULT_MODEL');
+    if (envHints.BRIDGE_JWT_SECRET) hintKeysLogged.push('BRIDGE_JWT_SECRET');
+    if (envHints.WEBHOOK_BASE_HOST) hintKeysLogged.push('WEBHOOK_BASE_HOST');
     logger.info(
       { tenantId, profiles, hintKeys: hintKeysLogged },
       'Step 0 setup saved',

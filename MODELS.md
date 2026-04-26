@@ -20,6 +20,13 @@ This file tracks the model versions Workforce0 ships as defaults. Update via PR 
 | Default | `Systran/faster-whisper-large-v3-turbo` | MIT | ~1.6 GB |
 | Light (English-only) | `Systran/faster-distil-whisper-large-v3.en` | MIT | ~750 MB |
 
+## Voice (local TTS)
+
+| Use | Model | License | Size |
+|---|---|---|---|
+| Default | Kokoro 82M (Apache 2.0) | Apache 2.0 | ~300 MB |
+| Multilingual tier-up | Qwen3-TTS | Apache 2.0 | ~1.5 GB |
+
 ## BYOK provider tiers (April 2026)
 
 | Tier | Anthropic | Google | OpenAI |

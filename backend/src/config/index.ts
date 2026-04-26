@@ -127,6 +127,30 @@ const envSchema = z.object({
   TWILIO_AUTH_TOKEN: optionalString,
   TWILIO_PHONE_NUMBER: optionalString,
 
+  // Voice intake (Pipecat plan)
+  // ---------------------------
+  // Hostname Twilio uses to dial back into our media-stream WebSocket.
+  // Required (alongside WEBHOOK_BASE_URL) when voice intake is active.
+  WEBHOOK_BASE_HOST: optionalString,
+  // URL of the Pipecat sidecar (Python) that runs local STT→LLM→TTS.
+  // Defaults to the docker-compose service name on the local-voice profile.
+  PIPECAT_BRIDGE_URL: z.string().default('http://pipecat-bridge:8400'),
+  // HMAC secret for short-lived JWTs the backend mints when bridging into
+  // the Pipecat sidecar. Required only when the local-voice profile is active.
+  // Treat empty strings as undefined so docker-compose `${BRIDGE_JWT_SECRET:-}`
+  // doesn't fail validation when the local-voice profile is inactive.
+  BRIDGE_JWT_SECRET: z
+    .string()
+    .optional()
+    .transform((v) => (v === '' ? undefined : v))
+    .refine((v) => v === undefined || v.length >= 32, {
+      message: 'BRIDGE_JWT_SECRET must be at least 32 characters when set',
+    }),
+  // Hard cap on a single voice call duration, in seconds (default 15 min).
+  VOICE_MAX_CALL_DURATION_SEC: z.coerce.number().int().min(60).max(3600).default(900),
+  // Hard cap on the per-call cost (USD) before we cut off paid providers.
+  VOICE_HARD_COST_CAP_USD: z.coerce.number().min(0).max(20).default(2),
+
   // GitHub (for Dev Agent + QA Agent)
   GITHUB_TOKEN: optionalString,         // PAT or GitHub App installation token
   GITHUB_DEFAULT_OWNER: optionalString,  // Default repo owner (org or user)

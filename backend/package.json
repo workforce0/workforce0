@@ -36,6 +36,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@workos-inc/node": "^8.8.0",
+    "argon2": "^0.44.0",
     "bullmq": "^5.76.2",
     "dotenv": "^16.4.7",
     "fastify": "^5.8.5",
@@ -45,6 +46,7 @@
     "graphology-shortest-path": "^2.1.0",
     "gray-matter": "^4.0.3",
     "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.0.0",
@@ -54,10 +56,11 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.5.13",
-    "@eslint/js": "^9.17.0",
     "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9.17.0",
     "tsx": "^4.19.2",

@@ -56,6 +56,10 @@ import { setupErrorHandler } from './lib/error-handler.js';
 import { setupGracefulShutdown } from './lib/graceful-shutdown.js';
 import { initTelemetry, shutdownTelemetry } from './lib/telemetry.js';
 import { setupTwilioMediaStreamWebSocket } from './routes/twilio.routes.js';
+import {
+  setupVoiceMediaStreamWebSocket,
+  VOICE_MEDIA_STREAM_PREFIX,
+} from './routes/voice-media-stream.routes.js';
 import { setupWebSocketDispatcher } from './lib/websocket-dispatcher.js';
 import { WebSocketServer } from 'ws';
 
@@ -169,6 +173,35 @@ async function main(): Promise<void> {
       });
       wsRoutes.set('/agent/ws', agentWss);
       logger.info('Agent hub WebSocket route registered');
+    }
+
+    // Voice intake (Pipecat plan) Media Stream WebSocket — registered BEFORE
+    // the legacy `/media-stream/` route so the more specific prefix
+    // `/media-stream/inbound/` matches first.
+    if (
+      (app.services as any).voiceProviderRouter &&
+      (app.services as any).tenantResolver
+    ) {
+      const voiceWss = setupVoiceMediaStreamWebSocket({
+        voiceProviderRouter: (app.services as any).voiceProviderRouter,
+        tenantResolver: (app.services as any).tenantResolver,
+        meetingService: {
+          createFromVoiceTranscript:
+            app.services.meetingService.createFromVoiceTranscript.bind(
+              app.services.meetingService,
+            ),
+        },
+        queueService: {
+          addJob: (name: string, payload: unknown) =>
+            app.services.queueService.addJob(name as any, payload as any),
+        },
+        // Recovers caller metadata stashed by the inbound webhook (see
+        // routes/webhooks/twilio-inbound.routes.ts). Optional in the type so
+        // unit tests don't have to provide it.
+        callContextStore: (app.services as any).callContextStore,
+      });
+      wsRoutes.set(VOICE_MEDIA_STREAM_PREFIX, voiceWss);
+      logger.info('Voice intake media-stream WebSocket route registered');
     }
 
     // Twilio Media Stream WebSocket (for voice dial-in)
