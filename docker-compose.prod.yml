@@ -125,7 +125,12 @@ services:
     image: ollama/ollama:0.21.2
     container_name: workforce0-ollama
     restart: unless-stopped
-    profiles: ["local-llm"]
+    # Belongs to BOTH `local-llm` (standalone Council fallback) AND
+    # `local-voice` (the Pipecat sidecar's LLM). Listing both lets
+    # `--profile local-voice` start ollama automatically without forcing the
+    # operator to also pass `--profile local-llm`. Same convenience applies
+    # to whisper and kokoro-tts below.
+    profiles: ["local-llm", "local-voice"]
     environment:
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
       OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
@@ -216,7 +221,11 @@ services:
     image: fedirz/faster-whisper-server:0.5.0-cpu
     container_name: workforce0-whisper
     restart: unless-stopped
-    profiles: ["local-stt"]
+    # Member of BOTH `local-stt` (standalone STT fallback) AND `local-voice`
+    # (used as the Pipecat sidecar's STT). See the ollama service for
+    # rationale — single-profile deploys still get a working voice stack
+    # without having to know about transitive dependencies.
+    profiles: ["local-stt", "local-voice"]
     environment:
       WHISPER__MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-large-v3-turbo}
       WHISPER__INFERENCE_DEVICE: ${WHISPER_INFERENCE_DEVICE:-auto}
