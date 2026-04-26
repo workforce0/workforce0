@@ -18,16 +18,25 @@ docker ps --filter "label=com.docker.compose.project=workforce0-public"
 
 ## Expected output
 
-```
-Workforce0 voice diagnostic
-✓ whisper: healthy
-✓ ollama:  healthy
-✓ kokoro-tts: healthy
-✓ pipecat-bridge: healthy
+The script prints a UTC-stamped header, a one-line health status for
+each voice service, and the first 500 bytes of the bridge's synthetic
+response. A healthy run looks roughly like:
 
-Synthetic session: STT 850ms · LLM 1.2s · TTS 320ms · total 2.4s
-Transcript: "hello, this is a test"
 ```
+Workforce0 voice diagnostic — 2026-04-25T12:00:00Z
+─────────────────────────────────────
+[whisper] health=healthy
+[ollama] health=healthy
+[kokoro-tts] health=healthy
+[pipecat-bridge] health=healthy
+
+Posting sample WAV to bridge synthetic endpoint…
+{"sessionId":"diag","transcript":"hello this is a test", ... }
+```
+
+Any `health=unhealthy` / `health=starting` line, a non-zero exit, or a
+missing trailing JSON body means the pipeline isn't fully wired — check
+the per-service logs (see below) before running real calls.
 
 If any step fails, run `bin/diagnose-voice.sh` for end-to-end voice
 diagnostics (the general-purpose `bin/diagnose.sh` covers the rest of the
