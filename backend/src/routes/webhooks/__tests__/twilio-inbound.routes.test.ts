@@ -34,6 +34,13 @@ const buildApp = async (overrides?: {
     tenantResolver: {
       resolveTenantByDID: vi.fn().mockResolvedValue(overrides?.tenantId ?? 't1'),
     },
+    // Mirror what TwilioVoiceProvider does in production: read the auth
+    // token from IntegrationConnection first, env fallback. Tests don't
+    // touch the DB, so the provider just defers to env — matches the
+    // existing "TWILIO_AUTH_TOKEN gating" assertions in the suite below.
+    twilioVoiceProvider: {
+      getAuthToken: () => config.TWILIO_AUTH_TOKEN ?? null,
+    },
   };
   await app.register(twilioInboundRoutes, { prefix: '/webhooks/twilio/voice' });
   await app.ready();

@@ -455,7 +455,11 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
       const tenantId = (request as FastifyRequest & { tenantId: string }).tenantId;
       const { id } = request.params;
 
-      if (!fastify.services.twilioVoiceService) {
+      // Read the live service from the provider — settings saves rebuild
+      // it without a restart, so the boot-time `twilioVoiceService` field
+      // would be stale here.
+      const twilioVoiceService = fastify.services.twilioVoiceProvider.getCurrent();
+      if (!twilioVoiceService) {
         return reply.status(503).send({
           success: false,
           error: {
@@ -493,7 +497,7 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
       });
 
       try {
-        const callSid = await fastify.services.twilioVoiceService.dialIntoMeeting(
+        const callSid = await twilioVoiceService.dialIntoMeeting(
           id,
           body.dialInNumber,
           body.accessCode,
@@ -542,11 +546,27 @@ export async function meetingRoutes(fastify: FastifyInstance): Promise<void> {
         });
       }
 
-      if (fastify.services.twilioVoiceService) {
-        const callSid = (meeting.metadata as Record<string, unknown>)?.callSid as string;
-        if (callSid) {
-          await fastify.services.twilioVoiceService.hangup(callSid);
+      // If a callSid was recorded, the call exists at Twilio's edge and we
+      // must actually hangup before claiming the meeting completed.
+      // Marking it complete without hanging up leaves a billed call live
+      // — the orange-bar bug CodeRabbit flagged.
+      const callSid = (meeting.metadata as Record<string, unknown>)?.callSid as string | undefined;
+      const twilioVoiceServiceForLeave = fastify.services.twilioVoiceProvider.getCurrent();
+      if (callSid) {
+        if (!twilioVoiceServiceForLeave) {
+          logger.error(
+            { meetingId: id, callSid },
+            'voice-leave: Twilio provider unavailable but callSid is recorded — refusing to mark meeting completed (live call would be orphaned)',
+          );
+          return reply.status(503).send({
+            success: false,
+            error: {
+              code: 'SERVICE_UNAVAILABLE',
+              message: 'Twilio is not configured; cannot end the active call. Reconnect Twilio in Settings → Integrations and try again.',
+            },
+          });
         }
+        await twilioVoiceServiceForLeave.hangup(callSid);
       }
 
       await fastify.services.prisma.meeting.update({

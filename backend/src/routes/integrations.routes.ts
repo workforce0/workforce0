@@ -117,6 +117,31 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
       connectedBy: userId,
     });
 
+    // Twilio is read by a long-lived provider for voice dial-in + voice
+    // intake signature verification. Reload it so the freshly saved creds
+    // take effect without a backend restart — this is the whole point of
+    // moving Twilio off env-first config (issue #44).
+    //
+    // Wrap in try/catch: a reload failure should not turn a successful
+    // DB write into a 500. Worst case the operator restarts the backend
+    // (or hits the test endpoint, which forces a re-read) and creds
+    // still take effect.
+    if (name === 'twilio') {
+      try {
+        await fastify.services.twilioVoiceProvider.reload();
+      } catch (err) {
+        // Deliberately do NOT log err.message — Twilio auth errors can
+        // surface the token in the exception text, and CodeQL flags
+        // `err.message` here as js/clear-text-logging. The error class
+        // is enough signal to investigate; full detail can be obtained
+        // by reproducing locally with DEBUG=1.
+        logger.error(
+          { tenantId, errorType: (err as Error).constructor?.name ?? 'Error' },
+          'Twilio provider reload failed after connect — creds saved, restart to activate',
+        );
+      }
+    }
+
     logger.info('Integration connected via wizard', { tenantId, name, userId });
     return reply.send({ success: true, data: connection });
   });
@@ -151,6 +176,22 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     }
     const tenantId = (request as FastifyRequest & { tenantId: string }).tenantId;
     await fastify.services.integrationConnectionService.disconnect(tenantId, name);
+
+    // Mirror of the /connect handler — clear the live provider so subsequent
+    // voice calls return 503 instead of using stale creds from the previous
+    // connection. Without this, an exec who clicked Disconnect would still
+    // see calls being placed/answered until the next backend restart.
+    if (name === 'twilio') {
+      try {
+        await fastify.services.twilioVoiceProvider.reload();
+      } catch (err) {
+        // See connect handler — same rationale, no err.message in logs.
+        logger.error(
+          { tenantId, errorType: (err as Error).constructor?.name ?? 'Error' },
+          'Twilio provider reload failed after disconnect — DB row removed, restart to fully clear in-memory service',
+        );
+      }
+    }
     return reply.send({ success: true });
   });
 }

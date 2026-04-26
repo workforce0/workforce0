@@ -124,6 +124,36 @@ export class TwilioVoiceService {
   }
 
   /**
+   * Phone number this instance is configured to dial from. Read by the
+   * provider for cred-change detection (so the wrapper can decide whether
+   * a settings save actually requires rebuilding the service).
+   */
+  getPhoneNumber(): string {
+    return this.config.phoneNumber;
+  }
+
+  /**
+   * Auth token used for both Twilio API client auth and inbound webhook
+   * signature verification (`twilio.validateRequest`). Voice-intake routes
+   * read this through the provider so the wizard can rotate the token
+   * without a backend restart.
+   *
+   * Treat the return value as sensitive — do not log it.
+   */
+  getAuthToken(): string {
+    return this.config.authToken;
+  }
+
+  /**
+   * Webhook base URL this instance was configured with. Same rationale as
+   * getPhoneNumber — the provider needs to inspect config without poking
+   * at private fields.
+   */
+  getWebhookBaseUrl(): string {
+    return this.config.webhookBaseUrl;
+  }
+
+  /**
    * Check if the service is properly configured.
    */
   isAvailable(): boolean {
