@@ -1702,6 +1702,10 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     // Stop queue workers first (needs Redis still alive for in-progress jobs)
     await queueService.stop();
 
+    // Stop the CallContextStore TTL sweep so the setInterval doesn't keep
+    // the event loop alive on SIGTERM/Fastify reload.
+    callContextStore.shutdown();
+
     await prisma.$disconnect();
     await pool.end();
     await redis.quit();
