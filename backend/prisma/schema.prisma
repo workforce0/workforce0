@@ -68,6 +68,10 @@ model TenantSettings {
   step0Migrated        Boolean  @default(false)
   /// Step 0 wizard: true once the tenant explicitly dismissed the migration banner.
   step0Dismissed       Boolean  @default(false)
+  /// Voice intake: E.164 numbers allowed to call without PIN.
+  voiceCallerAllowlist String[] @default([])
+  /// Voice intake: argon2id hash of the fallback PIN. Null = PIN disabled.
+  voicePinHash         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
