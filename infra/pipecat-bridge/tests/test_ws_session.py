@@ -114,3 +114,15 @@ def test_ws_rejects_invalid_token(client: TestClient):
     with pytest.raises(Exception):
         with client.websocket_connect("/sessions/CA-X?token=not-a-token") as ws:
             ws.receive()
+
+
+def test_ws_rejects_binary_init_frame(client: TestClient):
+    """First frame must be TEXT JSON. A binary first frame should close
+    1003 cleanly instead of raising RuntimeError from receive_text()."""
+    token = _make_token("CA-BIN")
+    with client.websocket_connect(f"/sessions/CA-BIN?token={token}") as ws:
+        # Send binary as the first frame — protocol violation.
+        ws.send_bytes(b"\x00\x01\x02\x03")
+        msg = ws.receive()
+        assert msg.get("type") == "websocket.close"
+        assert msg.get("code") == 1003

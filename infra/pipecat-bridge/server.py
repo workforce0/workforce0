@@ -139,13 +139,28 @@ async def session(websocket: WebSocket, call_id: str, token: str = Query(...)) -
 
     await websocket.accept()
 
-    # Init frame — must be valid JSON with type=="init". Anything else closes
-    # the socket with 1003 (unsupported data).
+    # Init frame — must be a TEXT frame carrying valid JSON with
+    # type=="init". A binary first frame (or any non-text/non-JSON payload)
+    # closes the socket with 1003 (unsupported data). We use the typed
+    # receive() rather than receive_text() because receive_text() raises
+    # RuntimeError on a binary first frame, which would surface as 500
+    # rather than a clean 1003.
     try:
-        init_msg = await websocket.receive_text()
-        init = json.loads(init_msg)
+        first = await websocket.receive()
     except WebSocketDisconnect:
         return
+
+    if first.get("type") == "websocket.disconnect":
+        return
+
+    init_text = first.get("text")
+    if init_text is None:
+        # Binary frame or empty — caller violated the protocol.
+        await websocket.close(code=1003, reason="init must be text")
+        return
+
+    try:
+        init = json.loads(init_text)
     except (json.JSONDecodeError, ValueError):
         await websocket.close(code=1003, reason="bad init json")
         return
