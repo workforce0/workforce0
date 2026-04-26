@@ -217,6 +217,78 @@ export class MeetingService {
   }
 
   /**
+   * Create a Meeting row from a completed voice-intake call.
+   *
+   * Used by the voice-media-stream route after the VoiceProvider session
+   * ends. The transcript is persisted as a `Transcript` row attached to the
+   * Meeting; metadata captures the Twilio CallSid and caller number so the
+   * downstream BA Agent can attribute the brief to the correct caller.
+   *
+   * @param input - tenantId, Twilio CallSid, caller number, transcript doc.
+   * @returns the created Meeting (id only — caller passes id to MEETING_PROCESS).
+   */
+  async createFromVoiceTranscript(input: {
+    tenantId: string;
+    callId: string;
+    callerNumber: string;
+    transcript: {
+      text: string;
+      turns: Array<{
+        speaker: 'agent' | 'caller';
+        text: string;
+        startMs: number;
+        endMs: number;
+      }>;
+      durationSec: number;
+      language: string;
+    };
+  }): Promise<{ id: string }> {
+    if (!this.prisma) {
+      throw new AppError(
+        'MeetingService.createFromVoiceTranscript requires prisma client',
+        500,
+        'INTERNAL',
+      );
+    }
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + input.transcript.durationSec * 1000);
+    const speakers = Array.from(new Set(input.transcript.turns.map((t) => t.speaker)));
+
+    const meeting = await this.prisma.meeting.create({
+      data: {
+        tenantId: input.tenantId,
+        title: `Voice intake (${input.callerNumber || input.callId})`,
+        meetingUrl: `voice://${input.callId}`,
+        startTime,
+        endTime,
+        status: 'completed',
+        source: 'voice_dialin',
+        metadata: {
+          callId: input.callId,
+          callerNumber: input.callerNumber,
+          language: input.transcript.language,
+        },
+        transcript: {
+          create: {
+            fullText: input.transcript.text,
+            duration: input.transcript.durationSec,
+            wordCount: input.transcript.text.split(/\s+/).filter(Boolean).length,
+            speakers,
+            segments: input.transcript.turns.map((t) => ({
+              speaker: t.speaker,
+              text: t.text,
+              startTime: t.startMs,
+              endTime: t.endMs,
+            })),
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return { id: meeting.id };
+  }
+
+  /**
    * Mark a scheduled meeting as failed and record the human-readable
    * reason. Called when the bot dispatch round-trip throws.
    */
