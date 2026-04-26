@@ -72,6 +72,9 @@ model TenantSettings {
   voiceCallerAllowlist String[] @default([])
   /// Voice intake: argon2id hash of the fallback PIN. Null = PIN disabled.
   voicePinHash         String?
+  /// Selected voice provider. One of "gemini" | "openai" | "pipecat".
+  /// Null = use router default (preferred provider for this install).
+  voiceProviderId      String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
