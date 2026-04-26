@@ -29,6 +29,8 @@ interface MockSettings {
   step0Migrated: boolean;
   step0Dismissed: boolean;
   meetingBotProviderId: string | null;
+  voiceCallerAllowlist?: string[];
+  voicePinHash?: string;
 }
 
 function buildApp(opts?: {
@@ -183,6 +185,69 @@ describe('setup-step0 routes', () => {
     const row = store.get('tenant-1');
     expect(row?.meetingBotProviderId).toBeNull();
     expect(row?.step0Migrated).toBe(true);
+  });
+
+  it('POST /save-step0 with voiceIntake.enabled hashes PIN, writes allowlist, adds local-voice profile', async () => {
+    const { app, store } = buildApp();
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/setup/save-step0',
+      payload: {
+        meetingBotProvider: 'skip',
+        localTier: 'none',
+        voiceIntake: {
+          enabled: true,
+          twilioNumber: '+18005551111',
+          callerAllowlist: ['+14155550100', '+14155550101'],
+          pin: '4242',
+        },
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.data.profiles).toEqual(['local-voice']);
+    expect(body.data.envHints.COMPOSE_PROFILES).toBe('local-voice');
+    expect(body.data.envHints.WEBHOOK_BASE_HOST).toMatch(/^https:\/\//);
+    // Generated secret should be 64 hex chars (32 bytes).
+    expect(body.data.envHints.BRIDGE_JWT_SECRET).toMatch(/^[0-9a-f]{64}$/);
+
+    const row = store.get('tenant-1');
+    expect(row?.voiceCallerAllowlist).toEqual([
+      '+14155550100',
+      '+14155550101',
+    ]);
+    // argon2 hashes start with $argon2 — never the raw pin.
+    expect(row?.voicePinHash).toBeDefined();
+    expect(row?.voicePinHash).toMatch(/^\$argon2/);
+    expect(row?.voicePinHash).not.toContain('4242');
+  }, 10_000);
+
+  it('POST /save-step0 with voiceIntake.enabled=false leaves voice settings untouched', async () => {
+    const { app, store } = buildApp();
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/setup/save-step0',
+      payload: {
+        meetingBotProvider: 'skip',
+        localTier: 'none',
+        voiceIntake: {
+          enabled: false,
+          twilioNumber: '',
+          callerAllowlist: [],
+        },
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.data.profiles).toEqual([]);
+    expect(body.data.envHints.BRIDGE_JWT_SECRET).toBeUndefined();
+    expect(body.data.envHints.WEBHOOK_BASE_HOST).toBeUndefined();
+    const row = store.get('tenant-1');
+    expect(row?.voiceCallerAllowlist).toBeUndefined();
+    expect(row?.voicePinHash).toBeUndefined();
   });
 
   it('POST /save-step0 rejects invalid body', async () => {

@@ -41,6 +41,10 @@ import {
   MeetingCapturePicker,
   type MeetingBotChoice,
 } from "@/components/wizard/meeting-capture-picker";
+import {
+  VoiceIntake,
+  type VoiceIntakeConfig,
+} from "@/components/wizard/voice-intake";
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -48,8 +52,10 @@ interface OnboardingWizardProps {
 }
 
 // Plan 3 Step 0: 3 new screens (hardware, local models, meeting capture)
-// inserted between Welcome and the existing 4 steps. Total = 5 + 3 = 8.
-const TOTAL_STEPS = 8;
+// inserted between Welcome and the existing 4 steps. Voice intake (Plan
+// "voice-intake-pipecat") adds a 4th screen after meeting capture, so the
+// total is 5 + 3 + 1 = 9.
+const TOTAL_STEPS = 9;
 
 interface ToolCard {
   name: string;
@@ -160,6 +166,12 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
   const [meetingBotProvider, setMeetingBotProvider] =
     useState<MeetingBotChoice>("vexa");
   const [vexaApiUrl, setVexaApiUrl] = useState<string>("");
+  const [voiceIntake, setVoiceIntake] = useState<VoiceIntakeConfig>({
+    enabled: false,
+    twilioNumber: "",
+    callerAllowlist: [],
+    pin: undefined,
+  });
   const [envHints, setEnvHints] = useState<Record<string, string> | null>(null);
   const [savingStep0, setSavingStep0] = useState(false);
   const [step0Error, setStep0Error] = useState<string | null>(null);
@@ -186,6 +198,7 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
           vexaApiUrl:
             meetingBotProvider === "vexa" && vexaApiUrl ? vexaApiUrl : undefined,
           localTier,
+          voiceIntake: voiceIntake.enabled ? voiceIntake : undefined,
         }),
       });
       const json = (await res.json()) as {
@@ -399,8 +412,40 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
               </div>
             )}
 
-            {/* Step 5: Connect meeting tools (was step 2 in original wizard) */}
+            {/* Step 5: Voice intake (Plan voice-intake-pipecat) */}
             {step === 5 && (
+              <div className="space-y-6 animate-fade-in">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-accent-subtle flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-accent" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-ink">Voice intake</h2>
+                      <p className="text-sm text-ink-tertiary">
+                        Optional inbound phone hotline via Twilio.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <VoiceIntake value={voiceIntake} onChange={setVoiceIntake} />
+
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStep(4)}>
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                  </Button>
+                  <Button size="sm" onClick={() => setStep(6)}>
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Connect meeting tools (was step 5 before voice intake) */}
+            {step === 6 && (
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -441,11 +486,11 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
                 </p>
 
                 <div className="flex items-center justify-between pt-2">
-                  <Button variant="ghost" size="sm" onClick={() => setStep(4)}>
+                  <Button variant="ghost" size="sm" onClick={() => setStep(5)}>
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </Button>
-                  <Button size="sm" onClick={() => setStep(6)}>
+                  <Button size="sm" onClick={() => setStep(7)}>
                     Continue
                     <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -453,8 +498,8 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
               </div>
             )}
 
-            {/* Step 6: How meetings work (was step 3 in original wizard) */}
-            {step === 6 && (
+            {/* Step 7: How meetings work (was step 6 before voice intake) */}
+            {step === 7 && (
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -493,11 +538,11 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
-                  <Button variant="ghost" size="sm" onClick={() => setStep(5)}>
+                  <Button variant="ghost" size="sm" onClick={() => setStep(6)}>
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </Button>
-                  <Button size="sm" onClick={() => setStep(7)}>
+                  <Button size="sm" onClick={() => setStep(8)}>
                     Continue
                     <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -505,8 +550,8 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
               </div>
             )}
 
-            {/* Step 7: Connect More Tools (was step 4 in original wizard) */}
-            {step === 7 && (
+            {/* Step 8: Connect More Tools (was step 7 before voice intake) */}
+            {step === 8 && (
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -548,11 +593,11 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
-                  <Button variant="ghost" size="sm" onClick={() => setStep(6)}>
+                  <Button variant="ghost" size="sm" onClick={() => setStep(7)}>
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </Button>
-                  <Button size="sm" onClick={() => setStep(8)}>
+                  <Button size="sm" onClick={() => setStep(9)}>
                     Continue
                     <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -560,8 +605,8 @@ export function OnboardingWizard({ onComplete, userName }: OnboardingWizardProps
               </div>
             )}
 
-            {/* Step 8: All set (was step 5 in original wizard) */}
-            {step === 8 && (
+            {/* Step 9: All set (was step 8 before voice intake) */}
+            {step === 9 && (
               <div className="text-center space-y-6 animate-fade-in">
                 <div className="flex justify-center">
                   <div className="w-16 h-16 rounded-2xl bg-emerald-light flex items-center justify-center">
