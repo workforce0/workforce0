@@ -29,7 +29,14 @@ Synthetic session: STT 850ms · LLM 1.2s · TTS 320ms · total 2.4s
 Transcript: "hello, this is a test"
 ```
 
-If any step fails, see `bin/diagnose.sh` for full container logs.
+If any step fails, run `bin/diagnose-voice.sh` for end-to-end voice
+diagnostics (the general-purpose `bin/diagnose.sh` covers the rest of the
+stack but does not exercise the kokoro/pipecat-bridge pipeline). To dump
+the recent logs for the voice services directly:
+
+```sh
+docker compose -f docker-compose.prod.yml logs --tail=100 kokoro-tts pipecat-bridge whisper ollama
+```
 
 ## Enabling the synthetic endpoint
 
