@@ -121,7 +121,7 @@ cd backend && npm run typecheck
 cd backend && git add prisma/schema.prisma prisma/migrations/ && git commit -m "feat(db): voice intake — add voiceCallerAllowlist + voicePinHash to TenantSettings"
 ```
 
-(Note: `Meeting.source` likely already accepts arbitrary strings; we use the literal `'voice_intake'` at write time. If `source` is an enum in the schema, add `voice_intake` as a value — same migration. Verify with `grep -n "Meeting.*source\|source.*Meeting" prisma/schema.prisma`.)
+(Note: `Meeting.source` is already a `String` column whose comment lists `'voice_dialin'` as one of its accepted values — verified in `backend/prisma/schema.prisma`. Voice-intake calls write `source: 'voice_dialin'` at runtime; no schema change required.)
 
 ---
 
@@ -164,6 +164,14 @@ export interface VoiceSessionInput {
   audioInWs: WebSocket;
   /** System prompt for the LLM (intake mode). */
   systemPrompt: string;
+  /**
+   * Twilio Media-Streams streamSid. Optional — only required for
+   * providers that need to wrap return audio in Twilio's outbound
+   * frame envelope (e.g. Pipecat writing TTS back to the caller).
+   * Cloud providers that own their own bidirectional transport
+   * (Gemini Live, OpenAI Realtime) ignore this field.
+   */
+  streamSid?: string;
 }
 
 export interface VoiceSessionHandle {
@@ -1359,7 +1367,7 @@ await fastify.register(voiceMediaStreamRoutes);  // no prefix; handler registers
 
 - [ ] **Step 4: `MeetingService.createFromVoiceTranscript`**
 
-Append a method to the existing meeting service that writes a Meeting row with `source: 'voice_intake'`, stores the transcript text, and stashes `callerNumber` in metadata:
+Append a method to the existing meeting service that writes a Meeting row with `source: 'voice_dialin'` (matches the existing `Meeting.source` enumeration in `schema.prisma`), stores the transcript text, and stashes `callerNumber` in metadata:
 
 ```ts
 async createFromVoiceTranscript(input: { tenantId: string; callId: string; callerNumber: string; transcript: TranscriptDoc }): Promise<{ id: string }> {
@@ -1367,7 +1375,7 @@ async createFromVoiceTranscript(input: { tenantId: string; callId: string; calle
     data: {
       tenantId: input.tenantId,
       title: `Voice intake (${input.callerNumber || input.callId})`,
-      source: 'voice_intake',
+      source: 'voice_dialin',
       durationSec: input.transcript.durationSec,
       transcriptText: input.transcript.text,
       metadata: { callId: input.callId, callerNumber: input.callerNumber, turns: input.transcript.turns },
