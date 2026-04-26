@@ -245,7 +245,7 @@ Saving writes `tenantSettings.voiceCallerAllowlist`, `tenantSettings.voicePinHas
 [9] On caller hangup OR system stop:
        handler closes Twilio WS
        provider emits final transcript
-       backend writes Meeting row (source: 'voice_intake'),
+       backend writes Meeting row (source: 'voice_dialin'),
        enqueues MEETING_PROCESS
 [10] BA Agent picks up MEETING_PROCESS → PRD lifecycle continues
 ```
@@ -270,7 +270,7 @@ ENDED      [terminal — emits voice.session_complete telemetry]
 
 ### Transcript shape
 
-Identical to `MeetingTranscript` from `meeting-bot-provider.types.ts` so the downstream `MEETING_PROCESS` handler doesn't branch on source. New `Meeting.source = 'voice_intake'` enum value (additive migration). Caller's number stored in `Meeting.metadata.callerNumber` for audit.
+Identical to `MeetingTranscript` from `meeting-bot-provider.types.ts` so the downstream `MEETING_PROCESS` handler doesn't branch on source. Voice-intake calls write `Meeting.source = 'voice_dialin'` — already defined as a value in the existing `String` `source` column (alongside `'upload' | 'google_meet' | 'recall'`), so no schema migration is required. Caller's number stored in `Meeting.metadata.callerNumber` for audit.
 
 ### Telemetry
 
@@ -383,7 +383,7 @@ Documented as the "voice smoke test" in `docs-site/.../self-hosting/voice.md`.
 
 ```
 backend/
-├── prisma/schema.prisma                               additive: TenantSettings.{voiceCallerAllowlist,voicePinHash}, Meeting.source enum '+voice_intake'
+├── prisma/schema.prisma                               additive: TenantSettings.{voiceCallerAllowlist,voicePinHash} (Meeting.source already accepts 'voice_dialin' — no change)
 ├── src/
 │   ├── services/voice-provider/                      NEW (see §2)
 │   ├── routes/webhooks/twilio-inbound.routes.ts      NEW
