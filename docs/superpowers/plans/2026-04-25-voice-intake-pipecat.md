@@ -917,6 +917,20 @@ export class PipecatProvider implements VoiceProvider {
     });
 
     bridgeWs.on('message', (raw: Buffer | string) => {
+      // Binary frames from the bridge are synthesized μ-law audio destined
+      // for the Twilio media stream. Forward them as a Twilio "media" event.
+      if (typeof raw !== 'string' && Buffer.isBuffer(raw)) {
+        if (input.audioInWs.readyState === 1 /* OPEN */ && input.streamSid) {
+          input.audioInWs.send(
+            JSON.stringify({
+              event: 'media',
+              streamSid: input.streamSid,
+              media: { payload: raw.toString('base64') },
+            }),
+          );
+        }
+        return;
+      }
       const text = typeof raw === 'string' ? raw : raw.toString('utf8');
       try {
         const msg = JSON.parse(text) as { type?: string; transcript?: TranscriptDoc; error?: string };
@@ -925,9 +939,8 @@ export class PipecatProvider implements VoiceProvider {
         } else if (msg.type === 'error' && msg.error) {
           for (const cb of errorCbs) cb(new Error(msg.error));
         }
-        // synthesized audio frames come back as binary; we forward those to twilio in the route handler.
       } catch {
-        // binary audio — forwarded in the media-stream route, not here.
+        // Non-JSON text frame — ignore (binary audio is handled above).
       }
     });
 
@@ -1401,6 +1414,8 @@ import { VoiceProviderRouter } from '../services/voice-provider/voice-provider-r
 import { GeminiRealtimeProvider } from '../services/voice-provider/providers/gemini-realtime.provider.js';
 import { OpenAIRealtimeProvider } from '../services/voice-provider/providers/openai-realtime.provider.js';
 import { PipecatProvider } from '../services/voice-provider/providers/pipecat.provider.js';
+import { GeminiLiveSession } from '../voice/gemini-live.js';
+import { OpenAIRealtimeSession } from '../voice/openai-realtime.js';
 import WebSocket from 'ws';
 
 const pinRateLimiter = new PinRateLimiter(redis);
@@ -1411,11 +1426,11 @@ const callerAuthService = new CallerAuthService(prisma, pinRateLimiter);
 // belongs here; for now, a thin adapter:
 const geminiRealtime = new GeminiRealtimeProvider({
   apiKey: config.GEMINI_API_KEY,
-  sessionFactory: () => new (await import('../voice/gemini-live.js')).GeminiLiveSession(),
+  sessionFactory: () => new GeminiLiveSession(),
 });
 const openaiRealtime = new OpenAIRealtimeProvider({
   apiKey: config.OPENAI_API_KEY,
-  sessionFactory: () => new (await import('../voice/openai-realtime.js')).OpenAIRealtimeSession(),
+  sessionFactory: () => new OpenAIRealtimeSession(),
 });
 const pipecatProvider = new PipecatProvider({
   bridgeBaseUrl: config.PIPECAT_BRIDGE_URL,
@@ -1928,11 +1943,15 @@ async def session(websocket: WebSocket, call_id: str, token: str = Query(...)) -
     if init.get("type") != "init":
         await websocket.close(code=1008, reason="bad init"); return
 
+    DEFAULT_PROMPT = (
+        "You are a helpful intake assistant. Listen, ask brief clarifying "
+        "questions, and confirm action items before ending the call."
+    )
     pipeline = VoicePipeline(
         stt=STTAdapter(os.environ["WHISPER_BASE_URL"]),
         llm=LLMAdapter(os.environ["OLLAMA_BASE_URL"]),
         tts=TTSAdapter(os.environ["KOKORO_BASE_URL"]),
-        system_prompt=init["systemPrompt"],
+        system_prompt=init.get("systemPrompt", DEFAULT_PROMPT),
     )
 
     async def on_audio(b: bytes) -> None:
