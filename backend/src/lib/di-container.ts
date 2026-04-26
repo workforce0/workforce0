@@ -120,6 +120,22 @@ import { LiveCaptureService } from '../services/meeting/live-capture.service.js'
 import { ModelRegistryService } from '../services/model-registry/model-registry.service.js';
 import { HardwareDetectService } from '../services/wizard/hardware-detect.service.js';
 
+// Voice intake (Pipecat plan) — caller auth, provider router, providers.
+import { CallerAuthService } from '../services/voice-provider/caller-auth.service.js';
+import { PinRateLimiter } from '../services/voice-provider/pin-rate-limiter.js';
+import { VoiceProviderRouter } from '../services/voice-provider/voice-provider-router.service.js';
+import { GeminiRealtimeProvider } from '../services/voice-provider/providers/gemini-realtime.provider.js';
+import { OpenAIRealtimeProvider } from '../services/voice-provider/providers/openai-realtime.provider.js';
+import { PipecatProvider } from '../services/voice-provider/providers/pipecat.provider.js';
+import type {
+  VoiceProviderId,
+  VoiceSessionInput,
+} from '../services/voice-provider/voice-provider.types.js';
+import { GeminiLiveClient } from '../voice/gemini-live.js';
+import { OpenAIRealtimeClient } from '../voice/openai-realtime.js';
+import { EventEmitter } from 'node:events';
+import WebSocket from 'ws';
+
 /**
  * Build the MemoryManager with the always-on builtin provider + optional
  * Honcho provider (enabled when HONCHO_API_KEY + HONCHO_APP_ID are set).
@@ -425,6 +441,33 @@ export interface Services {
 
   /** Step 0 wizard: detects host RAM/CPU and recommends a local-LLM tier. */
   hardwareDetectService: HardwareDetectService;
+
+  // -------------------------------------------------------------------------
+  // Voice intake (Pipecat plan)
+  // -------------------------------------------------------------------------
+  /** Caller-ID allowlist + PIN verification for inbound voice calls. */
+  callerAuthService: CallerAuthService;
+  /** Picks Gemini/OpenAI/Pipecat per tenant with deterministic fallback. */
+  voiceProviderRouter: VoiceProviderRouter;
+  /** Maps Twilio DIDs and CallSids to a tenantId. Single-tenant by default. */
+  tenantResolver: TenantResolver;
+}
+
+/**
+ * Maps inbound Twilio identifiers to a tenantId.
+ *
+ * Step 0 (single-tenant self-hosted): both methods return `'default'`.
+ *
+ * Upgrade path:
+ *  - Multi-tenant installs add a `tenantSettings.voiceDID` column and look up
+ *    by DID. CallSid → tenantId is derived by storing a transient call→tenant
+ *    record in Redis when `/inbound` is hit.
+ *  - Hosted tier reuses the same interface but plugs in a billing-aware
+ *    DID registry (e.g. one tenant per Twilio sub-account).
+ */
+export interface TenantResolver {
+  resolveTenantByDID(toNumber: string): Promise<string>;
+  resolveTenantByCallSid(callSid: string): Promise<string>;
 }
 
 /**
@@ -1190,6 +1233,123 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   logger.info('MeetingBotRouter initialized with vexa/manual providers');
 
   // ==========================================================================
+  // STEP 6.5: Voice intake (Pipecat plan)
+  // ==========================================================================
+  // Wire CallerAuthService, the three VoiceProvider implementations, the
+  // VoiceProviderRouter, and a single-tenant TenantResolver. The router falls
+  // through providers via `isAvailable()` so this is safe to construct even
+  // when keys/sidecar are absent — voice intake simply degrades to "no
+  // provider available" → the media-stream WS closes with a logged warning.
+  const pinRateLimiter = new PinRateLimiter(redis);
+  const callerAuthService = new CallerAuthService(rlsPrisma, pinRateLimiter);
+
+  // Adapter: the existing GeminiLiveClient extends EventEmitter but exposes
+  // connect()/disconnect() rather than start(input)/stop(). The voice-provider
+  // contract expects start/stop semantics, so we wrap construction in a thin
+  // adapter that emits 'end' (with an empty TranscriptDoc) and 'error'.
+  // Full audio bridging into Twilio Media Streams is wired in a later task;
+  // this scaffolding is enough for DI to type-check and unit tests to pass.
+  const geminiSessionFactory = (): EventEmitter & {
+    start(input: VoiceSessionInput): void;
+    stop(): Promise<void>;
+  } => {
+    const ee = new EventEmitter() as EventEmitter & {
+      start(input: VoiceSessionInput): void;
+      stop(): Promise<void>;
+    };
+    let client: GeminiLiveClient | null = null;
+    ee.start = (input: VoiceSessionInput) => {
+      if (!config.GEMINI_API_KEY) {
+        ee.emit('error', new Error('GEMINI_API_KEY not configured'));
+        return;
+      }
+      client = new GeminiLiveClient(config.GEMINI_API_KEY);
+      client.on('error', (err: Error) => ee.emit('error', err));
+      // Bridge connect; full audio path is finalized in a later task.
+      void client.connect().catch((err) => ee.emit('error', err as Error));
+      logger.debug({ callId: input.callId }, 'Gemini session adapter wired');
+    };
+    ee.stop = async () => {
+      client?.disconnect();
+      client = null;
+    };
+    return ee;
+  };
+
+  const openaiSessionFactory = (): EventEmitter & {
+    start(input: VoiceSessionInput): void;
+    stop(): Promise<void>;
+  } => {
+    const ee = new EventEmitter() as EventEmitter & {
+      start(input: VoiceSessionInput): void;
+      stop(): Promise<void>;
+    };
+    let client: OpenAIRealtimeClient | null = null;
+    ee.start = (input: VoiceSessionInput) => {
+      if (!config.OPENAI_API_KEY) {
+        ee.emit('error', new Error('OPENAI_API_KEY not configured'));
+        return;
+      }
+      client = new OpenAIRealtimeClient(config.OPENAI_API_KEY);
+      client.on('error', (err: Error) => ee.emit('error', err));
+      void client.connect().catch((err) => ee.emit('error', err as Error));
+      logger.debug({ callId: input.callId }, 'OpenAI session adapter wired');
+    };
+    ee.stop = async () => {
+      client?.disconnect();
+      client = null;
+    };
+    return ee;
+  };
+
+  const geminiRealtime = new GeminiRealtimeProvider({
+    apiKey: config.GEMINI_API_KEY,
+    sessionFactory: geminiSessionFactory,
+  });
+  const openaiRealtime = new OpenAIRealtimeProvider({
+    apiKey: config.OPENAI_API_KEY,
+    sessionFactory: openaiSessionFactory,
+  });
+  const pipecatProvider = new PipecatProvider({
+    bridgeBaseUrl: config.PIPECAT_BRIDGE_URL,
+    jwtSecret: config.BRIDGE_JWT_SECRET ?? '',
+    wsFactory: (url) => new WebSocket(url) as unknown as import('ws').WebSocket,
+  });
+
+  // Tenant settings adapter (voice-provider preference per tenant). Returns
+  // `null` for `voiceProviderId` when unset — router falls back to its
+  // DEFAULT_ORDER (pipecat → gemini → openai).
+  const voiceTenantSettingsAdapter = {
+    get: async (tenantId: string) => {
+      const row = await rlsPrisma.tenantSettings.findUnique({
+        where: { tenantId },
+      });
+      const vid = (row as { voiceProviderId?: string | null } | null)
+        ?.voiceProviderId ?? null;
+      return {
+        voiceProviderId: (vid as VoiceProviderId | null) ?? null,
+      };
+    },
+  };
+
+  const voiceProviderRouter = new VoiceProviderRouter(
+    [geminiRealtime, openaiRealtime, pipecatProvider],
+    voiceTenantSettingsAdapter,
+  );
+  logger.info('VoiceProviderRouter initialized with gemini/openai/pipecat providers');
+
+  // Single-tenant TenantResolver. Both methods return DEFAULT_TENANT_ID; see
+  // the TenantResolver JSDoc for the multi-tenant upgrade path.
+  const tenantResolver: TenantResolver = {
+    async resolveTenantByDID(_toNumber: string): Promise<string> {
+      return config.DEFAULT_TENANT_ID;
+    },
+    async resolveTenantByCallSid(_callSid: string): Promise<string> {
+      return config.DEFAULT_TENANT_ID;
+    },
+  };
+
+  // ==========================================================================
   // STEP 7: Register all services on Fastify instance
   // ==========================================================================
   const services: Services = {
@@ -1272,6 +1432,9 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     meetingBotRouter,
     config,
     hardwareDetectService: new HardwareDetectService(),
+    callerAuthService,
+    voiceProviderRouter,
+    tenantResolver,
   };
 
   // Decorate Fastify instance with services
