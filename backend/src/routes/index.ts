@@ -77,6 +77,7 @@ import { registerGoogleDriveWebhook } from './webhooks/google-drive.webhook.js';
 import { registerSlackEventsWebhook } from './webhooks/slack-events.handler.js';
 import { registerEmailReplyWebhook } from './webhooks/email-reply.handler.js';
 import { registerTwilioWhatsAppWebhook } from './webhooks/twilio-whatsapp.handler.js';
+import { twilioInboundRoutes } from './webhooks/twilio-inbound.routes.js';
 import { engagementRoutes } from './engagements.routes.js';
 import { modelConfigRoutes } from './model-config.routes.js';
 import { teamRoutes } from './team.routes.js';
@@ -368,6 +369,11 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       // shape as Twilio voice — lives here because it doesn't need the voice
       // service, only ApprovalFanoutService.
       await registerTwilioWhatsAppWebhook(webhookInstance);
+
+      // Voice intake (Pipecat plan): inbound + PIN webhooks. Mount unconditionally;
+      // CallerAuthService responds with `not_configured` (→ <Hangup/>) when the
+      // tenant hasn't set up an allowlist or PIN, so the route is safe to expose.
+      await webhookInstance.register(twilioInboundRoutes, { prefix: '/twilio/voice' });
 
       // Register Twilio webhooks (for voice callback and status)
       const { twilioVoiceService } = fastify.services;
