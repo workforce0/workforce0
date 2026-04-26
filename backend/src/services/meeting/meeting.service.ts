@@ -250,8 +250,13 @@ export class MeetingService {
         'INTERNAL',
       );
     }
-    const startTime = new Date();
-    const endTime = new Date(startTime.getTime() + input.transcript.durationSec * 1000);
+    // The transcript belongs to a call that just *ended* — `endTime` is now,
+    // and `startTime` is `endTime - durationSec`. The earlier order
+    // (`startTime = now()`, `endTime = now() + duration`) put the call in the
+    // future from the caller's clock, breaking ordering / windowing in
+    // downstream BA queries. See PR review.
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - input.transcript.durationSec * 1000);
     const speakers = Array.from(new Set(input.transcript.turns.map((t) => t.speaker)));
 
     const meeting = await this.prisma.meeting.create({

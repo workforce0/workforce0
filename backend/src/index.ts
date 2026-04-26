@@ -195,6 +195,10 @@ async function main(): Promise<void> {
           addJob: (name: string, payload: unknown) =>
             app.services.queueService.addJob(name as any, payload as any),
         },
+        // Recovers caller metadata stashed by the inbound webhook (see
+        // routes/webhooks/twilio-inbound.routes.ts). Optional in the type so
+        // unit tests don't have to provide it.
+        callContextStore: (app.services as any).callContextStore,
       });
       wsRoutes.set(VOICE_MEDIA_STREAM_PREFIX, voiceWss);
       logger.info('Voice intake media-stream WebSocket route registered');

@@ -137,7 +137,15 @@ const envSchema = z.object({
   PIPECAT_BRIDGE_URL: z.string().default('http://pipecat-bridge:8400'),
   // HMAC secret for short-lived JWTs the backend mints when bridging into
   // the Pipecat sidecar. Required only when the local-voice profile is active.
-  BRIDGE_JWT_SECRET: z.string().min(32).optional(),
+  // Treat empty strings as undefined so docker-compose `${BRIDGE_JWT_SECRET:-}`
+  // doesn't fail validation when the local-voice profile is inactive.
+  BRIDGE_JWT_SECRET: z
+    .string()
+    .optional()
+    .transform((v) => (v === '' ? undefined : v))
+    .refine((v) => v === undefined || v.length >= 32, {
+      message: 'BRIDGE_JWT_SECRET must be at least 32 characters when set',
+    }),
   // Hard cap on a single voice call duration, in seconds (default 15 min).
   VOICE_MAX_CALL_DURATION_SEC: z.coerce.number().int().min(60).max(3600).default(900),
   // Hard cap on the per-call cost (USD) before we cut off paid providers.

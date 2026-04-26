@@ -127,6 +127,8 @@ import { VoiceProviderRouter } from '../services/voice-provider/voice-provider-r
 import { GeminiRealtimeProvider } from '../services/voice-provider/providers/gemini-realtime.provider.js';
 import { OpenAIRealtimeProvider } from '../services/voice-provider/providers/openai-realtime.provider.js';
 import { PipecatProvider } from '../services/voice-provider/providers/pipecat.provider.js';
+import { CallContextStore } from '../services/voice-provider/call-context.store.js';
+import type { VoiceProvider } from '../services/voice-provider/voice-provider.types.js';
 import type {
   VoiceProviderId,
   VoiceSessionInput,
@@ -451,6 +453,12 @@ export interface Services {
   voiceProviderRouter: VoiceProviderRouter;
   /** Maps Twilio DIDs and CallSids to a tenantId. Single-tenant by default. */
   tenantResolver: TenantResolver;
+  /**
+   * Short-lived in-memory map from CallSid → caller metadata. Populated by
+   * the inbound webhook, consumed by the media-stream WS handler to recover
+   * the caller's E.164 number on upgrade (the WS upgrade carries no body).
+   */
+  callContextStore: CallContextStore;
 }
 
 /**
@@ -1302,6 +1310,13 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     return ee;
   };
 
+  // NOTE: gemini/openai realtime providers are still constructed here so a
+  // tenant who explicitly opts in via `voiceProviderId` settings can still
+  // exercise them. They are NOT in the router's DEFAULT_ORDER (see
+  // voice-provider-router.service.ts) until their session adapters emit
+  // transcript completion — currently the wrapped GeminiLiveClient /
+  // OpenAIRealtimeClient never fire `'end'`, so a default chain that included
+  // them would hang on transcript completion instead of falling through.
   const geminiRealtime = new GeminiRealtimeProvider({
     apiKey: config.GEMINI_API_KEY,
     sessionFactory: geminiSessionFactory,
@@ -1310,11 +1325,29 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     apiKey: config.OPENAI_API_KEY,
     sessionFactory: openaiSessionFactory,
   });
-  const pipecatProvider = new PipecatProvider({
-    bridgeBaseUrl: config.PIPECAT_BRIDGE_URL,
-    jwtSecret: config.BRIDGE_JWT_SECRET ?? '',
-    wsFactory: (url) => new WebSocket(url) as unknown as import('ws').WebSocket,
-  });
+
+  // Pipecat provider is the only one in the default rotation. If the JWT
+  // secret is empty/undefined (e.g. local-voice profile not active in the
+  // wizard), do NOT register it — the router will then resolve `null` and
+  // the media-stream WS handler will close the upgrade with a logged warning.
+  const bridgeJwtSecret = config.BRIDGE_JWT_SECRET;
+  const registeredProviders: VoiceProvider[] = [geminiRealtime, openaiRealtime];
+  if (bridgeJwtSecret && bridgeJwtSecret.length >= 32) {
+    const pipecatProvider = new PipecatProvider({
+      bridgeBaseUrl: config.PIPECAT_BRIDGE_URL,
+      jwtSecret: bridgeJwtSecret,
+      wsFactory: (url) => new WebSocket(url) as unknown as import('ws').WebSocket,
+    });
+    registeredProviders.unshift(pipecatProvider);
+    logger.info(
+      { bridgeBaseUrl: config.PIPECAT_BRIDGE_URL },
+      'Pipecat voice provider registered',
+    );
+  } else {
+    logger.warn(
+      'BRIDGE_JWT_SECRET unset — Pipecat voice provider DISABLED. Voice intake will return 503 until the local-voice profile is active.',
+    );
+  }
 
   // Tenant settings adapter (voice-provider preference per tenant). Returns
   // `null` for `voiceProviderId` when unset — router falls back to its
@@ -1333,10 +1366,18 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
   };
 
   const voiceProviderRouter = new VoiceProviderRouter(
-    [geminiRealtime, openaiRealtime, pipecatProvider],
+    registeredProviders,
     voiceTenantSettingsAdapter,
   );
-  logger.info('VoiceProviderRouter initialized with gemini/openai/pipecat providers');
+  logger.info(
+    { providerIds: registeredProviders.map((p) => p.id) },
+    'VoiceProviderRouter initialized',
+  );
+
+  // Short-lived call-context store. The inbound webhook stashes
+  // {fromNumber, toNumber} keyed by CallSid here so the media-stream WS
+  // handler can recover them on upgrade. See call-context.store.ts.
+  const callContextStore = new CallContextStore();
 
   // Single-tenant TenantResolver. Both methods return DEFAULT_TENANT_ID; see
   // the TenantResolver JSDoc for the multi-tenant upgrade path.
@@ -1435,6 +1476,7 @@ export async function setupDependencies(app: FastifyInstance): Promise<void> {
     callerAuthService,
     voiceProviderRouter,
     tenantResolver,
+    callContextStore,
   };
 
   // Decorate Fastify instance with services
