@@ -17,13 +17,24 @@ REQUIRED_CLAIMS = ("callId", "tenantId", "sessionId")
 
 def verify_token(token: str, secret: str) -> dict:
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
+        # Enforce exp presence + verification, plus our custom required
+        # claims, at decode time. PyJWT will raise MissingRequiredClaimError
+        # if any of these are absent.
+        payload = jwt.decode(
+            token,
+            secret,
+            algorithms=["HS256"],
+            options={
+                "require": ["exp", *REQUIRED_CLAIMS],
+                "verify_exp": True,
+                "verify_signature": True,
+            },
+        )
     except jwt.ExpiredSignatureError as exc:
         raise AuthError("token expired") from exc
+    except jwt.MissingRequiredClaimError as exc:
+        raise AuthError(f"missing claim: {exc.claim}") from exc
     except jwt.InvalidTokenError as exc:
         raise AuthError(f"invalid token: {exc}") from exc
 
-    for claim in REQUIRED_CLAIMS:
-        if claim not in payload:
-            raise AuthError(f"missing claim: {claim}")
     return payload
