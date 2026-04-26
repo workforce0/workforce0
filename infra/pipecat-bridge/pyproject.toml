@@ -1,0 +1,20 @@
+[project]
+name = "pipecat-bridge"
+version = "0.1.0"
+description = "Workforce0 Pipecat sidecar — STT (faster-whisper) → LLM (Ollama) → TTS (Kokoro)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "websockets>=13",
+  "pyjwt>=2.10",
+  "httpx>=0.28",
+  "pipecat-ai>=0.0.50",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "pytest-mock>=3.14"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
