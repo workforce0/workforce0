@@ -40,7 +40,7 @@
     "bullmq": "^5.76.2",
     "dotenv": "^16.4.7",
     "fastify": "^5.8.5",
-    "googleapis": "^170.1.0",
+    "googleapis": "^171.4.0",
     "graphology": "^0.26.0",
     "graphology-communities-louvain": "^2.0.2",
     "graphology-shortest-path": "^2.1.0",
