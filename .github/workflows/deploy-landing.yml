@@ -23,7 +23,7 @@ jobs:
       name: production-landing
       url: https://workforce0-landing.pages.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
