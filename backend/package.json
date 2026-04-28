@@ -38,7 +38,7 @@
     "@workos-inc/node": "^8.8.0",
     "argon2": "^0.44.0",
     "bullmq": "^5.76.2",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
     "googleapis": "^170.1.0",
     "graphology": "^0.26.0",
