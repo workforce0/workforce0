@@ -18,6 +18,15 @@ RUN npm ci
 # Copy source code and config
 COPY . .
 
+# next.config.ts evaluates `process.env.BACKEND_URL` at build time to bake
+# the /api/* and /webhooks/* rewrite destinations into the standalone
+# output. Without ARG + ENV plumbing here the compose `args.BACKEND_URL`
+# is invisible to `npm run build` and rewrites fall back to
+# http://127.0.0.1:3000 — which inside the frontend container points at
+# nothing, so every /api/* call ECONNREFUSEDs.
+ARG BACKEND_URL=http://backend:3000
+ENV BACKEND_URL=$BACKEND_URL
+
 # Build Next.js (standalone output)
 RUN npm run build
 
