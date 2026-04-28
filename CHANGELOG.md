@@ -5,6 +5,29 @@ All notable changes to Workforce0 are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/workforce0/workforce0/compare/workforce0-v1.1.0...workforce0-v1.2.0) (2026-04-28)
+
+
+### Features
+
+* **frontend:** Twilio Voice integration wizard ([#47](https://github.com/workforce0/workforce0/issues/47)) ([03a8c1a](https://github.com/workforce0/workforce0/commit/03a8c1a332122a1a462275b2892e5559ad7c11fa))
+* **frontend:** Twilio Voice integration wizard ([#47](https://github.com/workforce0/workforce0/issues/47)) ([03a8c1a](https://github.com/workforce0/workforce0/commit/03a8c1a332122a1a462275b2892e5559ad7c11fa))
+* inbound voice intake (Pipecat + faster-whisper + Kokoro) ([#41](https://github.com/workforce0/workforce0/issues/41)) ([080c5e4](https://github.com/workforce0/workforce0/commit/080c5e42073fbbeb5f5480819ac47c8b7703dc75))
+* **tour:** guided onboarding tour — Phase 1 (5 pages) ([#63](https://github.com/workforce0/workforce0/issues/63)) ([7c5f93d](https://github.com/workforce0/workforce0/commit/7c5f93d9d8cf3b0f84f47561da6eb281e60af933))
+* **tour:** guided onboarding tour — Phase 1 (5 pages) ([#63](https://github.com/workforce0/workforce0/issues/63)) ([7c5f93d](https://github.com/workforce0/workforce0/commit/7c5f93d9d8cf3b0f84f47561da6eb281e60af933))
+
+
+### Bug Fixes
+
+* **voice-intake:** correct 6 contracts found running locally end-to-end ([#43](https://github.com/workforce0/workforce0/issues/43)) ([3f0dc2f](https://github.com/workforce0/workforce0/commit/3f0dc2f2c9a069a6742c99d843e6f7ea6d545933))
+* **voice-intake:** correct contracts found by local end-to-end run ([#43](https://github.com/workforce0/workforce0/issues/43)) ([3f0dc2f](https://github.com/workforce0/workforce0/commit/3f0dc2f2c9a069a6742c99d843e6f7ea6d545933))
+
+
+### Code Refactoring
+
+* **voice:** make Twilio creds reloadable from IntegrationConnection ([#45](https://github.com/workforce0/workforce0/issues/45)) ([31054a6](https://github.com/workforce0/workforce0/commit/31054a678be50a8c85aee0f37bdc52119263cc48))
+* **voice:** make Twilio creds reloadable from IntegrationConnection (issue [#44](https://github.com/workforce0/workforce0/issues/44), backend) ([#45](https://github.com/workforce0/workforce0/issues/45)) ([31054a6](https://github.com/workforce0/workforce0/commit/31054a678be50a8c85aee0f37bdc52119263cc48))
+
 ## [1.1.0](https://github.com/workforce0/workforce0/compare/workforce0-v1.0.0...workforce0-v1.1.0) (2026-04-25)
 
 
