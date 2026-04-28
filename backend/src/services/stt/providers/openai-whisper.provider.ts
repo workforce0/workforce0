@@ -32,7 +32,8 @@ export class OpenAIWhisperProvider implements STTProvider {
     if (!this.config.apiKey) throw new Error('OpenAIWhisperProvider: OPENAI_API_KEY not set');
 
     const form = new FormData();
-    form.append('file', new Blob([input.audio]), input.filename);
+    // See local-whisper.provider for the narrow on @types/node 25.
+    form.append('file', new Blob([new Uint8Array(input.audio).slice()]), input.filename);
     form.append('model', 'whisper-1');
     form.append('response_format', 'verbose_json');
     if (input.language) form.append('language', input.language);

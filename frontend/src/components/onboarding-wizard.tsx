@@ -19,7 +19,7 @@ import {
   HelpCircle,
   Hash,
   Ticket,
-  Github,
+  GitPullRequest,
   Mail,
   Phone,
   Users,
@@ -101,7 +101,7 @@ const TOOL_CARDS: ToolCard[] = [
   },
   {
     name: "GitHub",
-    icon: Github,
+    icon: GitPullRequest,
     badge: "Recommended",
     badgeColor: "bg-violet-light text-violet",
     value: "AI dev agent creates pull requests in your repo",

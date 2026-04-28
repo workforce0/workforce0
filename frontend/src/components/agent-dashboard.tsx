@@ -138,7 +138,12 @@ function ConnectedAgentsSection({ onDisconnected }: { onDisconnected: () => void
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onDisconnectedRef = useRef(onDisconnected);
-  onDisconnectedRef.current = onDisconnected;
+  // React 19 + react-hooks 7 disallow writing to refs during render.
+  // Use a layout effect so the ref always reflects the latest callback
+  // before any other effect or callback fires.
+  useEffect(() => {
+    onDisconnectedRef.current = onDisconnected;
+  }, [onDisconnected]);
 
   const fetchStatus = useCallback(async () => {
     try {

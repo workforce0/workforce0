@@ -25,7 +25,7 @@ import {
   Pencil,
   FileText,
   Ticket,
-  Github,
+  GitPullRequest,
   Loader2,
   ArrowRight,
   ArrowLeft,
@@ -444,7 +444,7 @@ function TypeIcon({ type }: { type: QueueItemType }) {
   const map = {
     brief: { Icon: FileText, bg: "bg-accent-subtle text-accent" },
     ticket: { Icon: Ticket, bg: "bg-amber-light text-amber" },
-    pull_request: { Icon: Github, bg: "bg-violet-light text-violet" },
+    pull_request: { Icon: GitPullRequest, bg: "bg-violet-light text-violet" },
   } as const;
   const { Icon, bg } = map[type];
   return (

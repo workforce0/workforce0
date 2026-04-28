@@ -48,7 +48,7 @@ export class CallerAuthService {
     }
     const settings = await this.prisma.tenantSettings.findUnique({ where: { tenantId } });
     if (!settings?.voicePinHash) return false;
-    let ok = false;
+    let ok: boolean;
     try {
       ok = await argon2.verify(settings.voicePinHash, pin);
     } catch (err) {

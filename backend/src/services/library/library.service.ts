@@ -158,7 +158,7 @@ export class LibraryService {
     const entries = await safeReaddir(root);
     for (const entry of entries) {
       const skillDir = join(root, entry);
-      let isDir = false;
+      let isDir: boolean;
       try {
         isDir = statSync(skillDir).isDirectory();
       } catch {
@@ -228,7 +228,7 @@ export class LibraryService {
     const categories = await safeReaddir(root);
     for (const category of categories) {
       const categoryDir = join(root, category);
-      let isDir = false;
+      let isDir: boolean;
       try {
         isDir = statSync(categoryDir).isDirectory();
       } catch {

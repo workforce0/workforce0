@@ -359,7 +359,10 @@ export class TranscriptionService {
   ): Promise<WhisperApiResponse> {
     const formData = new FormData();
 
-    const blob = new Blob([chunkBuffer], { type: mimeType });
+    // @types/node 25 narrowed Buffer's ArrayBufferLike to ArrayBuffer;
+    // the native Blob BlobPart rejects the wider type. `.slice()` on a
+    // Uint8Array view returns a fresh Uint8Array<ArrayBuffer>.
+    const blob = new Blob([new Uint8Array(chunkBuffer).slice()], { type: mimeType });
     formData.append('file', blob, filename);
     formData.append('model', 'whisper-1');
     formData.append('response_format', 'verbose_json');
@@ -409,7 +412,7 @@ export class TranscriptionService {
       clearTimeout(timeoutId);
 
       if ((error as Error).name === 'AbortError') {
-        throw new Error('Whisper API request timed out after 120 seconds');
+        throw new Error('Whisper API request timed out after 120 seconds', { cause: error });
       }
 
       throw error;
