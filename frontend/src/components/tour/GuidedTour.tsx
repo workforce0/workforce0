@@ -42,10 +42,10 @@ function ResumeBanner({ onResume, onEnd }: { onResume: () => void; onEnd: () => 
   return (
     <div className="tour-resume-banner" role="status" aria-live="polite">
       <span>Tour paused — explore freely</span>
-      <button className="tour-resume-btn" onClick={onResume}>
+      <button type="button" className="tour-resume-btn" onClick={onResume}>
         Resume Tour
       </button>
-      <button className="tour-end-btn" onClick={onEnd}>
+      <button type="button" className="tour-end-btn" onClick={onEnd}>
         End Tour
       </button>
     </div>
@@ -170,12 +170,30 @@ export default function GuidedTour() {
         prevBtnText: "Back",
         doneBtnText: isLastRoute ? "Finish Tour" : `Continue to ${nextLabel}`,
         onCloseClick: () => {
+          // X button / overlay click. Pause the tour but don't mark
+          // complete — user can resume from the banner.
           d.destroy();
           driverRef.current = null;
           setPaused(true);
           localStorage.setItem(TOUR_PAUSED_KEY, "true");
         },
         onDestroyStarted: () => {
+          // driver.js fires onDestroyStarted on EVERY destroy: explicit
+          // close, finish-button click, programmatic d.destroy() during
+          // cleanup. Cubic P1 on PR #63 caught the original handler
+          // unconditionally advancing routes / marking complete, so a
+          // close mid-route would incorrectly skip ahead.
+          //
+          // Only treat the destroy as "finish this route" when the user
+          // actually clicked the done button on the last step. Anything
+          // else (mid-step close, programmatic teardown from the
+          // useEffect cleanup) falls through to a pause.
+          const finishedRoute = d.isLastStep();
+          if (!finishedRoute) {
+            d.destroy();
+            driverRef.current = null;
+            return;
+          }
           if (isLastRoute) {
             // Tour fully completed — clear state + persist server-side.
             localStorage.removeItem(TOUR_KEY);

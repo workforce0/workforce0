@@ -353,6 +353,11 @@ describe('Auth Routes', () => {
         name: 'Me Org',
         settings: { auth: { email: 'me@example.com', name: 'Me User' } },
       });
+      // /auth/me also reads the user row for hasSeenTour (PR #63).
+      // Mock it explicitly so the 401 user-not-found guard doesn't fire.
+      mockPrisma.user.findUnique.mockResolvedValue({
+        hasSeenTour: false,
+      });
 
       const res = await app.inject({
         method: 'GET', url: '/me',
@@ -364,6 +369,25 @@ describe('Auth Routes', () => {
       expect(body.data.email).toBe('me@example.com');
       expect(body.data.name).toBe('Me User');
       expect(body.data.organizationName).toBe('Me Org');
+      expect(body.data.hasSeenTour).toBe(false);
+    });
+
+    it('returns 401 when user row no longer exists (deleted account)', async () => {
+      const token = await getValidToken();
+      mockPrisma.tenant.findUnique.mockResolvedValue({
+        id: 'tenant-123',
+        name: 'Me Org',
+        settings: {},
+      });
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const res = await app.inject({
+        method: 'GET', url: '/me',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error?.code).toBe('USER_NOT_FOUND');
     });
 
     it('returns 401 when no authorization header', async () => {

@@ -19,8 +19,17 @@
  */
 import { DriveStep } from "driver.js";
 
+// Names hoisted so the EXPLORE_BTN HTML below can reference the
+// pause-event constant without duplicating the string literal.
+export const TOUR_KEY = "wf0_tour_active";
+export const TOUR_PAUSED_KEY = "wf0_tour_paused";
+export const TOUR_SEEN_PREFIX = "wf0_tour_seen_";
+
+export const TOUR_START_EVENT = "wf0-tour-start";
+export const TOUR_PAUSE_EVENT = "wf0-tour-pause";
+
 const EXPLORE_BTN =
-  '<br/><button class="tour-explore-btn" onclick="window.dispatchEvent(new Event(\'wf0-tour-pause\'))">Explore on your own</button>';
+  `<br/><button class="tour-explore-btn" onclick="window.dispatchEvent(new Event('${TOUR_PAUSE_EVENT}'))">Explore on your own</button>`;
 
 function buildDashboardSteps(): DriveStep[] {
   return [
@@ -284,10 +293,3 @@ export function hasStepsForRoute(pathname: string): boolean {
   return Array.isArray(STATIC_TOUR_STEPS[normalized]) &&
     STATIC_TOUR_STEPS[normalized].length > 0;
 }
-
-export const TOUR_KEY = "wf0_tour_active";
-export const TOUR_PAUSED_KEY = "wf0_tour_paused";
-export const TOUR_SEEN_PREFIX = "wf0_tour_seen_";
-
-export const TOUR_START_EVENT = "wf0-tour-start";
-export const TOUR_PAUSE_EVENT = "wf0-tour-pause";
