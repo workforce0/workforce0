@@ -51,7 +51,12 @@ export class LocalWhisperProvider implements STTProvider {
     if (!this.config.baseUrl) throw new Error('LocalWhisperProvider not configured');
 
     const form = new FormData();
-    form.append('file', new Blob([input.audio]), input.filename);
+    // @types/node 25 narrowed Buffer/Uint8Array's underlying ArrayBuffer
+    // type from `ArrayBufferLike` to `ArrayBuffer`. The native Blob ctor's
+    // BlobPart now rejects the wider type. `.slice()` returns a fresh
+    // Uint8Array<ArrayBuffer> that satisfies the constraint without a
+    // copy beyond what FormData would do anyway.
+    form.append('file', new Blob([new Uint8Array(input.audio).slice()]), input.filename);
     form.append('model', 'whisper-1');                  // faster-whisper-server's default
     form.append('response_format', 'verbose_json');
     if (input.language) form.append('language', input.language);

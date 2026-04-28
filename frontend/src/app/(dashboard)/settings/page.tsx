@@ -28,7 +28,7 @@ import {
   HelpCircle,
   Phone,
   Hash,
-  Github,
+  GitPullRequest,
   Mail,
   Users,
   CreditCard,
@@ -186,7 +186,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     name: "GitHub",
     testKey: "github",
     description: "Connect your code repository so your AI dev agent can create PRs.",
-    icon: Github,
+    icon: GitPullRequest,
     connectedKey: "githubConnected",
     fields: [
       {

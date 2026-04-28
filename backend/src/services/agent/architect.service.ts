@@ -172,7 +172,10 @@ export class ArchitectService {
     try {
       parsed = JSON.parse(cleaned);
     } catch (err) {
-      throw new Error(`Architect model output was not valid JSON: ${(err as Error).message}`);
+      throw new Error(
+        `Architect model output was not valid JSON: ${(err as Error).message}`,
+        { cause: err },
+      );
     }
 
     // Minimal shape validation; let downstream code handle loose fields.

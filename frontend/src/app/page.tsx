@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  Github,
+  GitPullRequest,
   Terminal,
   ShieldCheck,
   Cpu,
@@ -25,7 +25,6 @@ import {
   Workflow,
   KeyRound,
   Code2,
-  Slack,
   Check,
   Copy,
   Zap,
@@ -159,7 +158,7 @@ function TopNav() {
             className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-medium text-ink-secondary hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             aria-label="Star Workforce0 on GitHub"
           >
-            <Github className="w-4 h-4" aria-hidden />
+            <GitPullRequest className="w-4 h-4" aria-hidden />
             GitHub
           </a>
           {HOSTED_MODE ? (
@@ -311,7 +310,7 @@ function Hero({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-surface border border-border text-ink text-[14px] font-semibold hover:bg-surface-hover hover:border-border-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            <Github className="w-4 h-4" aria-hidden />
+            <GitPullRequest className="w-4 h-4" aria-hidden />
             Star on GitHub
           </a>
           <a
@@ -591,7 +590,7 @@ function FeatureGrid() {
       body: "Use the API keys you already pay for. No pay-per-token reselling, no hidden inference fees, no lock-in.",
     },
     {
-      icon: <Slack className="w-5 h-5" aria-hidden />,
+      icon: <MessageSquare className="w-5 h-5" aria-hidden />,
       title: "Comms-first workflow",
       body: "Slack, Google Chat, WhatsApp — two-way reply-to-approve. Teams is one-way notifications today. The exec never opens the app; approvals happen in the room they already work in.",
     },
@@ -674,11 +673,11 @@ function FeatureCard({
 
 function IntegrationsRow() {
   const integrations = [
-    { name: "Slack", icon: <Slack className="w-5 h-5" aria-hidden /> },
+    { name: "Slack", icon: <MessageSquare className="w-5 h-5" aria-hidden /> },
     { name: "Google Chat", icon: <MessageSquare className="w-5 h-5" aria-hidden /> },
     { name: "WhatsApp", icon: <Phone className="w-5 h-5" aria-hidden /> },
     { name: "Jira", icon: <Briefcase className="w-5 h-5" aria-hidden /> },
-    { name: "GitHub", icon: <Github className="w-5 h-5" aria-hidden /> },
+    { name: "GitHub", icon: <GitPullRequest className="w-5 h-5" aria-hidden /> },
     { name: "Google Drive", icon: <FileText className="w-5 h-5" aria-hidden /> },
     { name: "Twilio voice", icon: <Video className="w-5 h-5" aria-hidden /> },
     { name: "Email reply", icon: <Users className="w-5 h-5" aria-hidden /> },
@@ -861,7 +860,7 @@ function FinalCTA() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 h-12 px-6 rounded-xl bg-white text-[#0a0a0c] text-[14.5px] font-semibold hover:bg-white/90 transition-colors"
               >
-                <Github className="w-4 h-4" aria-hidden />
+                <GitPullRequest className="w-4 h-4" aria-hidden />
                 Clone on GitHub
               </a>
               <a
