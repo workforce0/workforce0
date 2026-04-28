@@ -159,6 +159,19 @@ export default function GuidedTour() {
 
       const steps: DriveStep[] = baseSteps;
 
+      // Total = sum of every route's step count, so the badge reads
+      // "STEP 4 OF 13" across the whole tour rather than per-page.
+      // Re-imported here (vs hoisted) so the lookup re-runs cheaply on
+      // every route change without leaking a stale closure.
+      const totalSteps = routeOrder.reduce((sum, r) => {
+        const s = getStepsForRoute(r) ?? [];
+        return sum + s.length;
+      }, 0);
+      const stepsBefore = routeOrder.slice(0, currentRouteIndex).reduce((sum, r) => {
+        const s = getStepsForRoute(r) ?? [];
+        return sum + s.length;
+      }, 0);
+
       const d = driver({
         showProgress: true,
         animate: true,
@@ -169,6 +182,19 @@ export default function GuidedTour() {
         nextBtnText: "Next",
         prevBtnText: "Back",
         doneBtnText: isLastRoute ? "Finish Tour" : `Continue to ${nextLabel}`,
+        // Stamp a global step counter onto the popover for our CSS
+        // ::before badge to render. driver.js's own progress text is
+        // hidden via `display:none` in driver.css.
+        onPopoverRender: (popover) => {
+          const idx = d.getActiveIndex();
+          if (typeof idx === "number") {
+            const globalStep = stepsBefore + idx + 1;
+            popover.wrapper.setAttribute(
+              "data-step-progress",
+              `STEP ${globalStep} OF ${totalSteps}`,
+            );
+          }
+        },
         onCloseClick: () => {
           // X button / overlay click. Pause the tour but don't mark
           // complete — user can resume from the banner.
