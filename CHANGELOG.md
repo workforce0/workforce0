@@ -5,6 +5,19 @@ All notable changes to Workforce0 are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/workforce0/workforce0/compare/workforce0-v1.2.0...workforce0-v1.3.0) (2026-04-28)
+
+
+### Features
+
+* **tour:** light-card redesign — branded step badge, soft halo, animated ([#69](https://github.com/workforce0/workforce0/issues/69)) ([a36855f](https://github.com/workforce0/workforce0/commit/a36855f0b36f779143463265bf36ada997d1e8be))
+* **tour:** light-card redesign — branded step badge, soft halo, animated ([#69](https://github.com/workforce0/workforce0/issues/69)) ([a36855f](https://github.com/workforce0/workforce0/commit/a36855f0b36f779143463265bf36ada997d1e8be))
+
+
+### Bug Fixes
+
+* **frontend:** pass BACKEND_URL build arg to next.config rewrites ([#66](https://github.com/workforce0/workforce0/issues/66)) ([de9ee4f](https://github.com/workforce0/workforce0/commit/de9ee4f31a7891512fe22b16831b5ed184e5b4ba))
+
 ## [1.2.0](https://github.com/workforce0/workforce0/compare/workforce0-v1.1.0...workforce0-v1.2.0) (2026-04-28)
 
 
