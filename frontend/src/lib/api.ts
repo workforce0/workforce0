@@ -195,9 +195,14 @@ class ApiClient {
    * re-trigger) and again on Finish/End (so the localStorage flag
    * matches the server). Best-effort — failures here just mean the
    * tour might re-show on the next fresh login, not a hard error.
+   *
+   * The empty-object body is deliberate: `request()` always sets
+   * `Content-Type: application/json` and Fastify rejects empty bodies
+   * on a JSON content-type with HTTP 400. Sending `{}` makes the body
+   * a valid empty JSON document.
    */
   async markTourSeen() {
-    return this.post<Record<string, never>>("/api/auth/me/tour-seen");
+    return this.post<Record<string, never>>("/api/auth/me/tour-seen", {});
   }
 
   // Dashboard
