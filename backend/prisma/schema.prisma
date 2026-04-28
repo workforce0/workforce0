@@ -190,6 +190,11 @@ model User {
   name         String
   role         String    @default("member") // owner, admin, member, viewer
   lastLoginAt  DateTime?
+  /// Set true when the user has completed (or explicitly dismissed) the
+  /// guided tour. Persisted server-side so re-login on a fresh browser
+  /// doesn't re-trigger the auto-tour. localStorage is used as a fast
+  /// client-side hint; this column is the source of truth.
+  hasSeenTour  Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

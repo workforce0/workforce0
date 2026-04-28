@@ -185,7 +185,19 @@ class ApiClient {
       organizationName: string;
       tenantId: string;
       integrations: Record<string, unknown>;
+      hasSeenTour?: boolean;
     }>("/api/auth/me");
+  }
+
+  /**
+   * Mark the guided tour as completed for the current user. Idempotent.
+   * Called by `GuidedTour.tsx` on auto-start (so re-login doesn't
+   * re-trigger) and again on Finish/End (so the localStorage flag
+   * matches the server). Best-effort — failures here just mean the
+   * tour might re-show on the next fresh login, not a hard error.
+   */
+  async markTourSeen() {
+    return this.post<Record<string, never>>("/api/auth/me/tour-seen");
   }
 
   // Dashboard

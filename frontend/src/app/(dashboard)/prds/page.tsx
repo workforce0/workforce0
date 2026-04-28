@@ -75,7 +75,7 @@ export default function PrdsPage() {
     <div className="min-h-screen">
       <Header title="Briefs" />
 
-      <div className="space-y-6 p-6 lg:p-8">
+      <div data-tour="prds-header" className="space-y-6 p-6 lg:p-8">
         {/* Needs Attention Banner */}
         {needsAttention.length > 0 && (
           <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-transparent border-gradient bg-accent-subtle/40 p-4 shadow-[var(--shadow-card)]">
@@ -100,7 +100,7 @@ export default function PrdsPage() {
         )}
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div data-tour="prds-create" className="flex flex-wrap items-center justify-between gap-4">
           <Tabs value={filter} onValueChange={setFilter}>
             <TabsList>
               <TabsTrigger value="all">All</TabsTrigger>

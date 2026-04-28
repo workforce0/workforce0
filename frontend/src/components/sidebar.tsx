@@ -131,7 +131,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav aria-label="Main navigation" className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+      <nav data-tour="sidebar-nav" aria-label="Main navigation" className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         {navigation.map((item) => {
           // Pick the deepest matching nav entry as active so parents (e.g. /settings)
           // don't also light up when on a child route (e.g. /settings/system-status).

@@ -563,6 +563,26 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
 
+    // Look up `hasSeenTour` on the user row — drives the auto-tour
+    // gating in GuidedTour.tsx. Read here so /auth/me is the single
+    // authoritative bootstrap call and the frontend doesn't need a
+    // second roundtrip just for the tour flag.
+    //
+    // If the user row no longer exists (account deleted while a JWT is
+    // still valid) we 401 — silently returning hasSeenTour:false would
+    // let the deleted user's frontend keep operating against a tenant
+    // that no longer trusts them.
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId as string },
+      select: { hasSeenTour: true },
+    });
+    if (!user) {
+      return reply.status(401).send({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'Account no longer exists' },
+      });
+    }
+
     return reply.send({
       success: true,
       data: {
@@ -572,9 +592,69 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         role: payload.role || 'owner',
         organizationName: tenant.name,
         tenantId: tenant.id,
+        hasSeenTour: user.hasSeenTour,
       },
     });
   });
+
+  /**
+   * POST /auth/me/tour-seen
+   *
+   * Mark the tour completed (or dismissed) for the current user. Idempotent —
+   * the frontend fires this on first auto-tour bootstrap and again on
+   * "Finish Tour" / "End Tour", and we don't care if it's set twice.
+   *
+   * Rate-limited (10/min/IP) because it writes to the user row on every
+   * call. CodeQL's js/missing-rate-limiting rule flagged the original;
+   * the limit is generous enough that the legitimate ~3 calls per
+   * tour-completion never hit it.
+   */
+  fastify.post(
+    '/me/tour-seen',
+    {
+      config: {
+        rateLimit: { max: 10, timeWindow: '1 minute' },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const authHeader = request.headers['authorization'];
+      const token = authHeader?.startsWith('Bearer ')
+        ? authHeader.replace('Bearer ', '')
+        : (request.cookies as Record<string, string> | undefined)?.[ACCESS_COOKIE];
+
+      if (!token) {
+        return reply.status(401).send({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Token required' },
+        });
+      }
+
+      const payload = verifyToken(token);
+      if (!payload) {
+        return reply.status(401).send({
+          success: false,
+          error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' },
+        });
+      }
+
+      // updateMany returns a count rather than throwing P2025 when the
+      // row is missing — turns the deleted-user case into a clean 404
+      // instead of an unhandled 500.
+      const result = await fastify.services.prisma.user.updateMany({
+        where: { id: payload.userId as string },
+        data: { hasSeenTour: true },
+      });
+
+      if (result.count === 0) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'Account no longer exists' },
+        });
+      }
+
+      return reply.send({ success: true });
+    },
+  );
 
   /**
    * GET /auth/invite/:token - Validate invitation token

@@ -1,0 +1,175 @@
+/* Guided Tour (driver.js) — themed for Workforce0.
+ * Picks up `--color-accent` from globals.css (indigo-600 by default).
+ * Originally ported from aether2.0's `lib/tour/driver.css`. */
+
+/* Force hover-only controls visible when their row is the tour's active element */
+.driver-active-element [data-context-menu],
+tr.driver-active-element [data-context-menu] {
+  opacity: 1 !important;
+}
+
+.driver-popover {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  max-width: 400px !important;
+  padding: 20px !important;
+  overflow: visible !important;
+}
+.driver-popover * {
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+.driver-popover-title {
+  color: #ffffff !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  margin-bottom: 8px !important;
+}
+.driver-popover-description {
+  color: #e2e8f0 !important;
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+  max-height: 240px !important;
+  overflow-y: auto !important;
+}
+.driver-popover-footer {
+  margin-top: 16px !important;
+}
+.driver-popover-navigation-btns {
+  gap: 8px !important;
+}
+.driver-popover-navigation-btns button {
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  min-height: 36px !important;
+  white-space: nowrap !important;
+}
+.driver-popover-next-btn {
+  background: var(--color-accent, #4f46e5) !important;
+  color: #fff !important;
+  border: none !important;
+  text-shadow: none !important;
+}
+.driver-popover-next-btn:hover {
+  background: #2549d8 !important;
+}
+.driver-popover-prev-btn {
+  background: transparent !important;
+  color: #cbd5e1 !important;
+  border: 1px solid #475569 !important;
+  text-shadow: none !important;
+}
+.driver-popover-prev-btn:hover:not(:disabled) {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.driver-popover-prev-btn:disabled,
+.driver-popover-prev-btn[disabled] {
+  opacity: 1 !important;
+  color: #64748b !important;
+  border-color: #334155 !important;
+  background: transparent !important;
+  cursor: not-allowed !important;
+}
+.driver-popover-close-btn {
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+.driver-popover-close-btn:hover {
+  color: #f1f5f9 !important;
+}
+.driver-popover-arrow-side-left .driver-popover-arrow,
+.driver-popover-arrow-side-right .driver-popover-arrow,
+.driver-popover-arrow-side-top .driver-popover-arrow,
+.driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-color: #1e293b !important;
+}
+.driver-popover-progress-text {
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.tour-explore-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #93c5fd;
+  border: 1px solid #2549d8;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tour-explore-btn:hover {
+  background: #2549d8;
+  color: #fff;
+}
+
+.tour-resume-banner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: #1e293b;
+  border: 1px solid var(--color-accent, #4f46e5);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.4);
+  animation: tour-slide-up 0.3s ease-out;
+}
+.tour-resume-banner span {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.tour-resume-banner button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 36px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+}
+.tour-resume-btn {
+  background: var(--color-accent, #4f46e5);
+  color: #fff;
+}
+.tour-resume-btn:hover {
+  background: #2549d8;
+}
+.tour-end-btn {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #475569 !important;
+}
+.tour-end-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+@keyframes tour-slide-up {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}

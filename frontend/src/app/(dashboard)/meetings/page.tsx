@@ -107,7 +107,7 @@ export default function MeetingsPage() {
 
       <div className="space-y-6 p-6 lg:p-8">
         {/* Actions bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div data-tour="meetings-header" className="flex flex-wrap items-center justify-between gap-4">
           <div className="relative w-full max-w-md flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
             <Input
@@ -122,7 +122,7 @@ export default function MeetingsPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setShowVoiceDialIn(true)}>
+            <Button data-tour="meetings-voice-dialin" variant="outline" onClick={() => setShowVoiceDialIn(true)}>
               <Phone className="h-4 w-4" />
               Voice Dial-In
             </Button>
@@ -131,6 +131,7 @@ export default function MeetingsPage() {
               Paste Transcript
             </Button>
             <Button
+              data-tour="meetings-upload"
               variant="accent"
               className="glow"
               onClick={() => setShowUpload(true)}
