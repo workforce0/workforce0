@@ -104,6 +104,7 @@ export default function MeetingsPage() {
   return (
     <div className="min-h-screen">
       <Header title="Meetings" />
+      <span data-tour="meetings-header" aria-hidden className="sr-only" />
 
       <div className="space-y-6 p-6 lg:p-8">
         {/* Actions bar */}
@@ -122,7 +123,7 @@ export default function MeetingsPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setShowVoiceDialIn(true)}>
+            <Button data-tour="meetings-voice-dialin" variant="outline" onClick={() => setShowVoiceDialIn(true)}>
               <Phone className="h-4 w-4" />
               Voice Dial-In
             </Button>
@@ -131,6 +132,7 @@ export default function MeetingsPage() {
               Paste Transcript
             </Button>
             <Button
+              data-tour="meetings-upload"
               variant="accent"
               className="glow"
               onClick={() => setShowUpload(true)}

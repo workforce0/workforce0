@@ -83,7 +83,7 @@ export default function IntegrationsPage() {
     <>
       <Header title="Integrations" />
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-8">
-        <header className="flex flex-wrap items-end justify-between gap-4">
+        <header data-tour="integrations-header" className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-2">
             <h1 className="font-display text-3xl font-semibold tracking-[-0.025em] text-ink">
               Integrations
@@ -207,6 +207,7 @@ function IntegrationCard({
   const isConnected = !comingSoon && status === "connected";
   return (
     <div
+      data-tour={`integration-card-${entry.name}`}
       className={`card-interactive relative flex flex-col gap-3 rounded-[var(--radius-lg)] border bg-surface p-5 shadow-[var(--shadow-card)] transition-all duration-[160ms] ${
         isConnected
           ? "border-transparent border-gradient"

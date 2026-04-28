@@ -74,8 +74,9 @@ export default function PrdsPage() {
   return (
     <div className="min-h-screen">
       <Header title="Briefs" />
+      <span data-tour="prds-header" aria-hidden className="sr-only" />
 
-      <div className="space-y-6 p-6 lg:p-8">
+      <div data-tour="prds-create" className="space-y-6 p-6 lg:p-8">
         {/* Needs Attention Banner */}
         {needsAttention.length > 0 && (
           <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-transparent border-gradient bg-accent-subtle/40 p-4 shadow-[var(--shadow-card)]">

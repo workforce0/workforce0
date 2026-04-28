@@ -242,7 +242,7 @@ export default function EngagementsPage() {
       <Header title="Engagements" />
 
       <div className="max-w-5xl space-y-6 p-6 lg:p-8">
-        <div className="space-y-2">
+        <div data-tour="engagements-header" className="space-y-2">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.025em] text-ink">
             Project Pipeline
           </h2>
@@ -251,7 +251,7 @@ export default function EngagementsPage() {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs data-tour="engagements-list" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="active">Active</TabsTrigger>

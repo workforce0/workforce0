@@ -563,6 +563,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
 
+    // Look up `hasSeenTour` on the user row — drives the auto-tour
+    // gating in GuidedTour.tsx. Read here so /auth/me is the single
+    // authoritative bootstrap call and the frontend doesn't need a
+    // second roundtrip just for the tour flag.
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId as string },
+      select: { hasSeenTour: true },
+    });
+
     return reply.send({
       success: true,
       data: {
@@ -572,8 +581,45 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         role: payload.role || 'owner',
         organizationName: tenant.name,
         tenantId: tenant.id,
+        hasSeenTour: user?.hasSeenTour ?? false,
       },
     });
+  });
+
+  /**
+   * POST /auth/me/tour-seen
+   *
+   * Mark the tour completed (or dismissed) for the current user. Idempotent —
+   * the frontend fires this on first auto-tour bootstrap and again on
+   * "Finish Tour" / "End Tour", and we don't care if it's set twice.
+   */
+  fastify.post('/me/tour-seen', async (request: FastifyRequest, reply: FastifyReply) => {
+    const authHeader = request.headers['authorization'];
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.replace('Bearer ', '')
+      : (request.cookies as Record<string, string> | undefined)?.['wf0_access'];
+
+    if (!token) {
+      return reply.status(401).send({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Token required' },
+      });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return reply.status(401).send({
+        success: false,
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' },
+      });
+    }
+
+    await fastify.services.prisma.user.update({
+      where: { id: payload.userId as string },
+      data: { hasSeenTour: true },
+    });
+
+    return reply.send({ success: true });
   });
 
   /**

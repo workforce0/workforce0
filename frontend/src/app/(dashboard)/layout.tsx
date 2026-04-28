@@ -8,6 +8,8 @@ import { AgentJobNotifier } from "@/components/agent-job-notifier";
 import { ProjectProvider } from "@/lib/project-context";
 import { BrandMark } from "@/components/brand-mark";
 import { Step0MigrationBanner } from "@/components/step0-migration-banner";
+import GuidedTour from "@/components/tour/GuidedTour";
+import StartTourButton from "@/components/tour/StartTourButton";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -63,6 +65,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </svg>
           </button>
           <span className="ml-3 text-[15px] font-bold text-ink tracking-tight">Workforce0</span>
+          <div className="ml-auto">
+            <StartTourButton />
+          </div>
+        </div>
+        {/* Desktop tour-launcher row — sits flush right above the
+            content. The mobile launcher above lives in the existing
+            header bar to save vertical space on small screens. */}
+        <div className="hidden lg:flex justify-end items-center gap-2 px-6 pt-4">
+          <StartTourButton />
         </div>
         {/* Plan 3 Step 0: top-of-app migration banner for existing tenants
             who haven't yet seen the local-everything wizard. Renders null
@@ -74,6 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
+      <GuidedTour />
     </div>
     </ProjectProvider>
   );
