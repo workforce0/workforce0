@@ -5,6 +5,14 @@ All notable changes to Workforce0 are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1](https://github.com/workforce0/workforce0/compare/workforce0-v1.3.0...workforce0-v1.3.1) (2026-04-28)
+
+
+### Bug Fixes
+
+* **deps:** land 4 stuck major-version bumps from issue [#65](https://github.com/workforce0/workforce0/issues/65) ([#70](https://github.com/workforce0/workforce0/issues/70)) ([3e9c1d8](https://github.com/workforce0/workforce0/commit/3e9c1d873dca7f6d4d5202ca8122eea25ca058c3))
+* **deps:** land 4 stuck major-version bumps from issue [#65](https://github.com/workforce0/workforce0/issues/65) ([#70](https://github.com/workforce0/workforce0/issues/70)) ([3e9c1d8](https://github.com/workforce0/workforce0/commit/3e9c1d873dca7f6d4d5202ca8122eea25ca058c3))
+
 ## [1.3.0](https://github.com/workforce0/workforce0/compare/workforce0-v1.2.0...workforce0-v1.3.0) (2026-04-28)
 
 

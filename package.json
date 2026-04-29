@@ -1,6 +1,6 @@
 {
   "name": "workforce0",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Open-source, self-hosted AI workforce for product teams. Meetings in, shipped code out.",
   "bin": {
     "workforce0": "./scripts/onboard.mjs"
