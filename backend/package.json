@@ -35,7 +35,7 @@
     "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "@workos-inc/node": "^8.8.0",
+    "@workos-inc/node": "^9.1.1",
     "argon2": "^0.44.0",
     "bullmq": "^5.76.2",
     "dotenv": "^17.4.2",
